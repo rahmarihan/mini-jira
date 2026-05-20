@@ -1,11 +1,11 @@
 // frontend/src/services/task.service.ts
-import api from '../../lib/axios';
-import { Task, TaskStatus } from '../types/task';
+import api from "../../lib/axios";
+import { Task, TaskStatus } from "../types/task";
 
 export const taskService = {
   getAll: async (teamId?: string): Promise<Task[]> => {
     const params = teamId ? { teamId } : {};
-    const res = await api.get('/tasks', { params });
+    const res = await api.get("/tasks", { params });
     return res.data;
   },
 
@@ -15,7 +15,7 @@ export const taskService = {
   },
 
   create: async (data: Partial<Task>): Promise<Task> => {
-    const res = await api.post('/tasks', data);
+    const res = await api.post("/tasks", data);
     return res.data;
   },
 

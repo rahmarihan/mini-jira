@@ -4,6 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuditLogService {
+  private readonly tableName =
+    process.env.DYNAMODB_AUDIT_LOG_TABLE || 'Mini-jira-AuditLog';
+
   constructor(private readonly dynamoService: DynamoService) {}
 
   async logStatusChange(params: {
@@ -23,11 +26,16 @@ export class AuditLogService {
       timestamp: new Date().toISOString(),
     };
 
-    await this.dynamoService.putItem('AuditLog', item);
+    await this.dynamoService.putItem(this.tableName, item);
     return item;
   }
 
   async getLogsForTask(taskId: string) {
-    return this.dynamoService.queryByIndex('AuditLog', 'taskId-index', 'taskId', taskId);
+    return this.dynamoService.queryByIndex(
+      this.tableName,
+      'taskId-index',
+      'taskId',
+      taskId,
+    );
   }
 }
