@@ -1,6 +1,7 @@
 // frontend/src/components/tasks/CreateTaskForm.tsx
 'use client';
 import { useState } from 'react';
+import { getErrorMessage } from '@/src/lib/error';
 import { Task, Priority  } from '../../types/task';
 
 interface Props {
@@ -45,8 +46,8 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props)
     try {
         await onSubmit(form);   // now returns Task (optional to store it)
         onCancel();
-    } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to create task');
+    } catch (err: unknown) {
+        setError(getErrorMessage(err, 'Failed to create task'));
     } finally {
         setLoading(false);
     }

@@ -12,12 +12,13 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { STATUS_ORDER, TaskStatus } from '../common/types';
-
-const TABLE = 'Tasks';
+import { isManager, STATUS_ORDER, TaskStatus } from '../common/types';
 
 @Injectable()
 export class TasksService {
+  private readonly tableName =
+    process.env.DYNAMODB_TASKS_TABLE || 'Mini-jira-Tasks';
+
   constructor(
     private readonly dynamo: DynamoService,
     private readonly auditLog: AuditLogService,
@@ -33,24 +34,25 @@ export class TasksService {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    await this.dynamo.putItem(TABLE, task);
+    await this.dynamo.putItem(this.tableName, task);
     return task;
   }
 
   async findAll(user: CurrentUserPayload, teamId?: string) {
-    if (user.role === 'manager') {
-      const all = await this.dynamo.scan(TABLE);
+    const all = await this.dynamo.scan(this.tableName);
+
+    if (isManager(user)) {
       if (teamId) return all.filter((t) => t.teamId === teamId);
       return all;
     }
     // Employee — always filter by their own teamId
-    return this.dynamo.queryByIndex(TABLE, 'teamId-index', 'teamId', user.teamId);
+    return all.filter((task) => task.teamId === user.teamId);
   }
 
   async findOne(taskId: string, user: CurrentUserPayload) {
-    const task = await this.dynamo.getItem(TABLE, { taskId });
+    const task = await this.dynamo.getItem(this.tableName, { taskId });
     if (!task) throw new NotFoundException('Task not found');
-    if (user.role !== 'manager' && task.teamId !== user.teamId) {
+    if (!isManager(user) && task.teamId !== user.teamId) {
       throw new ForbiddenException('You cannot access this task');
     }
     return task;
@@ -59,7 +61,7 @@ export class TasksService {
   async update(taskId: string, dto: UpdateTaskDto, user: CurrentUserPayload) {
     await this.findOne(taskId, user); // validates access
     const updates = { ...dto, updatedAt: new Date().toISOString() };
-    return this.dynamo.updateItem(TABLE, { taskId }, updates);
+    return this.dynamo.updateItem(this.tableName, { taskId }, updates);
   }
 
   async updateStatus(
@@ -78,7 +80,7 @@ export class TasksService {
     }
 
     const updated = await this.dynamo.updateItem(
-      TABLE,
+      this.tableName,
       { taskId },
       { status: dto.status, updatedAt: new Date().toISOString() },
     );
@@ -87,7 +89,7 @@ export class TasksService {
       taskId,
       changedBy: user.sub,
       changedByName: user.name,
-      oldStatus: task.status,
+      oldStatus: String(task.status),
       newStatus: dto.status,
     });
 
@@ -95,11 +97,11 @@ export class TasksService {
   }
 
   async remove(taskId: string, user: CurrentUserPayload) {
-    if (user.role !== 'manager') {
+    if (!isManager(user)) {
       throw new ForbiddenException('Only managers can delete tasks');
     }
     await this.findOne(taskId, user);
-    await this.dynamo.deleteItem(TABLE, { taskId });
+    await this.dynamo.deleteItem(this.tableName, { taskId });
     return { message: 'Task deleted successfully' };
   }
 

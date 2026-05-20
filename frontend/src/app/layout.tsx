@@ -1,6 +1,7 @@
 // frontend/src/app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css';
+import AppShell from '@/src/components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: 'Mini Jira',
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-gray-50 min-h-screen">{children}</body>
+      <body className="min-h-screen bg-background antialiased">
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   );
 }

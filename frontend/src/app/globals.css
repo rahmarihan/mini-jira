@@ -128,3 +128,28 @@
     @apply font-sans;
   }
 }
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@layer utilities {
+  .skeleton-shimmer {
+    @apply relative overflow-hidden bg-muted;
+  }
+  .skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(1 0 0 / 0.45),
+      transparent
+    );
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  }
+}

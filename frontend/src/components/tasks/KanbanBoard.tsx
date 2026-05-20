@@ -10,6 +10,7 @@ import KanbanColumn from './KanbanColumn';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
 import { useTaskStore } from '../../store/task.store';
+import SkeletonLoader from '../dashboard/SkeletonLoader';
 
 interface Props {
   tasks: Task[];
@@ -41,13 +42,7 @@ export default function KanbanBoard({ tasks, onStatusChange, loading }: Props) {
   };
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-4 gap-4">
-        {STATUS_ORDER.map((s) => (
-          <div key={s} className="h-96 bg-gray-100 rounded-xl animate-pulse" />
-        ))}
-      </div>
-    );
+    return <SkeletonLoader variant="kanban" />;
   }
 
   return (

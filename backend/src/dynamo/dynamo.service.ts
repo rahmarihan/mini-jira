@@ -1,5 +1,5 @@
 // backend/src/dynamo/dynamo.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   DynamoDBClient,
   PutItemCommand,
@@ -13,7 +13,10 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 
 @Injectable()
 export class DynamoService {
-  private client: DynamoDBClient;
+  private readonly client: DynamoDBClient;
+  private readonly logger = new Logger(DynamoService.name);
+  private readonly localTables = new Map<string, Map<string, Record<string, any>>>();
+  private warnedAboutFallback = false;
 
   constructor() {
     this.client = new DynamoDBClient({
@@ -22,25 +25,37 @@ export class DynamoService {
   }
 
   async putItem(tableName: string, item: Record<string, any>): Promise<void> {
-    await this.client.send(
-      new PutItemCommand({
-        TableName: tableName,
-        Item: marshall(item, { removeUndefinedValues: true }),
-      }),
-    );
+    try {
+      await this.client.send(
+        new PutItemCommand({
+          TableName: tableName,
+          Item: marshall(item, { removeUndefinedValues: true }),
+        }),
+      );
+    } catch (error) {
+      if (!this.shouldUseLocalFallback(error)) throw error;
+      this.warnAboutLocalFallback(error);
+      this.localPutItem(tableName, item);
+    }
   }
 
   async getItem(
     tableName: string,
     key: Record<string, any>,
   ): Promise<Record<string, any> | null> {
-    const result = await this.client.send(
-      new GetItemCommand({
-        TableName: tableName,
-        Key: marshall(key),
-      }),
-    );
-    return result.Item ? unmarshall(result.Item) : null;
+    try {
+      const result = await this.client.send(
+        new GetItemCommand({
+          TableName: tableName,
+          Key: marshall(key),
+        }),
+      );
+      return result.Item ? unmarshall(result.Item) : null;
+    } catch (error) {
+      if (!this.shouldUseLocalFallback(error)) throw error;
+      this.warnAboutLocalFallback(error);
+      return this.localGetItem(tableName, key);
+    }
   }
 
   async updateItem(
@@ -50,7 +65,7 @@ export class DynamoService {
   ): Promise<Record<string, any>> {
     const updateExpressions: string[] = [];
     const expressionAttributeNames: Record<string, string> = {};
-    const expressionAttributeValues: Record<string, any> = {};
+    const expressionAttributeValues: Record<string, unknown> = {};
 
     Object.entries(updates).forEach(([k, v]) => {
       updateExpressions.push(`#${k} = :${k}`);
@@ -58,31 +73,40 @@ export class DynamoService {
       expressionAttributeValues[`:${k}`] = v;
     });
 
-    const result = await this.client.send(
-      new UpdateItemCommand({
-        TableName: tableName,
-        Key: marshall(key),
-        UpdateExpression: `SET ${updateExpressions.join(', ')}`,
-        ExpressionAttributeNames: expressionAttributeNames,
-        ExpressionAttributeValues: marshall(expressionAttributeValues, {
-          removeUndefinedValues: true,
+    try {
+      const result = await this.client.send(
+        new UpdateItemCommand({
+          TableName: tableName,
+          Key: marshall(key),
+          UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+          ExpressionAttributeNames: expressionAttributeNames,
+          ExpressionAttributeValues: marshall(expressionAttributeValues, {
+            removeUndefinedValues: true,
+          }),
+          ReturnValues: 'ALL_NEW',
         }),
-        ReturnValues: 'ALL_NEW',
-      }),
-    );
-    return result.Attributes ? unmarshall(result.Attributes) : {};
+      );
+      return result.Attributes ? unmarshall(result.Attributes) : {};
+    } catch (error) {
+      if (!this.shouldUseLocalFallback(error)) throw error;
+      this.warnAboutLocalFallback(error);
+      return this.localUpdateItem(tableName, key, updates);
+    }
   }
 
-  async deleteItem(
-    tableName: string,
-    key: Record<string, any>,
-  ): Promise<void> {
-    await this.client.send(
-      new DeleteItemCommand({
-        TableName: tableName,
-        Key: marshall(key),
-      }),
-    );
+  async deleteItem(tableName: string, key: Record<string, any>): Promise<void> {
+    try {
+      await this.client.send(
+        new DeleteItemCommand({
+          TableName: tableName,
+          Key: marshall(key),
+        }),
+      );
+    } catch (error) {
+      if (!this.shouldUseLocalFallback(error)) throw error;
+      this.warnAboutLocalFallback(error);
+      this.localDeleteItem(tableName, key);
+    }
   }
 
   async queryByIndex(
@@ -91,22 +115,158 @@ export class DynamoService {
     keyName: string,
     keyValue: string,
   ): Promise<Record<string, any>[]> {
-    const result = await this.client.send(
-      new QueryCommand({
-        TableName: tableName,
-        IndexName: indexName,
-        KeyConditionExpression: '#key = :value',
-        ExpressionAttributeNames: { '#key': keyName },
-        ExpressionAttributeValues: marshall({ ':value': keyValue }),
-      }),
-    );
-    return (result.Items || []).map((item) => unmarshall(item));
+    try {
+      const result = await this.client.send(
+        new QueryCommand({
+          TableName: tableName,
+          IndexName: indexName,
+          KeyConditionExpression: '#key = :value',
+          ExpressionAttributeNames: { '#key': keyName },
+          ExpressionAttributeValues: marshall({ ':value': keyValue }),
+        }),
+      );
+      return (result.Items || []).map((item) => unmarshall(item));
+    } catch (error) {
+      if (!this.shouldUseLocalFallback(error)) throw error;
+      this.warnAboutLocalFallback(error);
+      return this.localQueryByIndex(tableName, keyName, keyValue);
+    }
   }
 
   async scan(tableName: string): Promise<Record<string, any>[]> {
-    const result = await this.client.send(
-      new ScanCommand({ TableName: tableName }),
+    try {
+      const result = await this.client.send(
+        new ScanCommand({ TableName: tableName }),
+      );
+      return (result.Items || []).map((item) => unmarshall(item));
+    } catch (error) {
+      if (!this.shouldUseLocalFallback(error)) throw error;
+      this.warnAboutLocalFallback(error);
+      return this.localScan(tableName);
+    }
+  }
+
+  private shouldUseLocalFallback(error: unknown) {
+    if (process.env.DYNAMODB_FALLBACK_TO_MEMORY === 'false') return false;
+    if (
+      process.env.NODE_ENV === 'production' &&
+      process.env.DYNAMODB_FALLBACK_TO_MEMORY !== 'true'
+    ) {
+      return false;
+    }
+
+    return this.isMissingCredentialsError(error) || this.isMissingTableError(error);
+  }
+
+  private isMissingCredentialsError(error: unknown) {
+    const name = this.getErrorName(error);
+    const message = this.getErrorMessage(error);
+    return (
+      name === 'CredentialsProviderError' ||
+      message.includes('Could not load credentials from any providers')
     );
-    return (result.Items || []).map((item) => unmarshall(item));
+  }
+
+  private isMissingTableError(error: unknown) {
+    const name = this.getErrorName(error);
+    const message = this.getErrorMessage(error);
+    return (
+      name === 'ResourceNotFoundException' ||
+      message.includes('Requested resource not found')
+    );
+  }
+
+  private warnAboutLocalFallback(error: unknown) {
+    if (this.warnedAboutFallback) return;
+    this.warnedAboutFallback = true;
+    this.logger.warn(
+      `Using in-memory DynamoDB fallback: ${this.getErrorMessage(error)}. Data resets when the backend restarts.`,
+    );
+  }
+
+  private localPutItem(tableName: string, item: Record<string, any>) {
+    this.getLocalTable(tableName).set(
+      this.getLocalKeyFromItem(item),
+      this.cloneItem(item),
+    );
+  }
+
+  private localGetItem(tableName: string, key: Record<string, any>) {
+    const item = this.getLocalTable(tableName).get(this.getLocalKey(key));
+    return item ? this.cloneItem(item) : null;
+  }
+
+  private localUpdateItem(
+    tableName: string,
+    key: Record<string, any>,
+    updates: Record<string, any>,
+  ) {
+    const table = this.getLocalTable(tableName);
+    const localKey = this.getLocalKey(key);
+    const item = {
+      ...(table.get(localKey) || {}),
+      ...key,
+      ...updates,
+    };
+    table.set(localKey, this.cloneItem(item));
+    return this.cloneItem(item);
+  }
+
+  private localDeleteItem(tableName: string, key: Record<string, any>) {
+    this.getLocalTable(tableName).delete(this.getLocalKey(key));
+  }
+
+  private localQueryByIndex(tableName: string, keyName: string, keyValue: string) {
+    return this.localScan(tableName).filter((item) => item[keyName] === keyValue);
+  }
+
+  private localScan(tableName: string) {
+    return [...this.getLocalTable(tableName).values()].map((item) =>
+      this.cloneItem(item),
+    );
+  }
+
+  private getLocalTable(tableName: string) {
+    if (!this.localTables.has(tableName)) {
+      this.localTables.set(tableName, new Map<string, Record<string, any>>());
+    }
+    return this.localTables.get(tableName)!;
+  }
+
+  private getLocalKey(key: Record<string, any>) {
+    const [keyName, keyValue] = Object.entries(key)[0] || ['id', 'unknown'];
+    return `${keyName}:${String(keyValue)}`;
+  }
+
+  private getLocalKeyFromItem(item: Record<string, any>) {
+    const keyName = [
+      'taskId',
+      'projectId',
+      'logId',
+      'userId',
+      'teamId',
+      'commentId',
+      'fileId',
+      'notificationId',
+      'id',
+    ].find((candidate) => item[candidate] !== undefined);
+
+    if (!keyName) {
+      return JSON.stringify(item);
+    }
+
+    return `${keyName}:${String(item[keyName])}`;
+  }
+
+  private cloneItem(item: Record<string, any>) {
+    return { ...item };
+  }
+
+  private getErrorName(error: unknown) {
+    return error instanceof Error ? error.name : '';
+  }
+
+  private getErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : String(error);
   }
 }

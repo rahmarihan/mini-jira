@@ -3,26 +3,43 @@
 import { useState, useEffect, useCallback } from 'react';
 import { taskService } from '../services/task.service';
 import { Task, TaskStatus } from '../types/task';
+import { getErrorMessage } from '../lib/error';
 
-export function useTasks(teamId?: string) {
+function hasAuthToken(): boolean {
+  if (typeof window === 'undefined') return false;
+  return Boolean(localStorage.getItem('mini-jira.idToken'));
+}
+
+export function useTasks(teamId?: string, enabled?: boolean) {
+  const isEnabled = enabled ?? hasAuthToken();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
+    if (!isEnabled) {
+      setTasks([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       const data = await taskService.getAll(teamId);
       setTasks(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch tasks');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to fetch tasks'));
     } finally {
       setLoading(false);
     }
-  }, [teamId]);
+  }, [isEnabled, teamId]);
 
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchTasks();
+  }, [fetchTasks]);
 
   const createTask = async (data: Partial<Task>) => {
     const task = await taskService.create(data);

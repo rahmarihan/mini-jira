@@ -5,6 +5,7 @@ import { DynamoService } from '../dynamo/dynamo.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { isManager } from '../common/types';
 
 const TABLE = 'Projects';
 
@@ -36,14 +37,14 @@ export class ProjectsService {
   }
 
   async update(projectId: string, dto: UpdateProjectDto, user: CurrentUserPayload) {
-    if (user.role !== 'manager') throw new ForbiddenException('Only managers can update projects');
+    if (!isManager(user)) throw new ForbiddenException('Only managers can update projects');
     await this.findOne(projectId);
     const updates = { ...dto, updatedAt: new Date().toISOString() };
     return this.dynamo.updateItem(TABLE, { projectId }, updates);
   }
 
   async remove(projectId: string, user: CurrentUserPayload) {
-    if (user.role !== 'manager') throw new ForbiddenException('Only managers can delete projects');
+    if (!isManager(user)) throw new ForbiddenException('Only managers can delete projects');
     await this.findOne(projectId);
     await this.dynamo.deleteItem(TABLE, { projectId });
     return { message: 'Project deleted successfully' };
