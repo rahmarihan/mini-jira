@@ -40,6 +40,18 @@ class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  DYNAMODB_COMMENTS_TABLE = 'Mini-jira-Comments';
+
+  @IsString()
+  @IsOptional()
+  S3_ORIGINAL_IMAGES_BUCKET = 'mini-jira-original-images-giu';
+
+  @IsString()
+  @IsOptional()
+  S3_RESIZED_IMAGES_BUCKET = 'mini-jira-resized-images-giu';
+
+  @IsString()
+  @IsOptional()
   DYNAMODB_FALLBACK_TO_MEMORY = 'true';
 }
 
@@ -68,6 +80,9 @@ export function validate(config: Record<string, unknown>) {
     DYNAMODB_TASKS_TABLE: validatedConfig.DYNAMODB_TASKS_TABLE,
     DYNAMODB_PROJECTS_TABLE: validatedConfig.DYNAMODB_PROJECTS_TABLE,
     DYNAMODB_AUDIT_LOG_TABLE: validatedConfig.DYNAMODB_AUDIT_LOG_TABLE,
+    DYNAMODB_COMMENTS_TABLE: validatedConfig.DYNAMODB_COMMENTS_TABLE,
+    S3_ORIGINAL_IMAGES_BUCKET: validatedConfig.S3_ORIGINAL_IMAGES_BUCKET,
+    S3_RESIZED_IMAGES_BUCKET: validatedConfig.S3_RESIZED_IMAGES_BUCKET,
     DYNAMODB_FALLBACK_TO_MEMORY: validatedConfig.DYNAMODB_FALLBACK_TO_MEMORY,
   };
 }

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Task, STATUS_LABELS } from '../../types/task';
 import { taskService } from '../../services/task.service';
 import { formatDate, isOverdue } from '../../../lib/utils';
+import CommentThread from '../comments/CommentThread';
+import ImageUpload from '../files/ImageUpload';
 
 interface AuditEntry {
   logId: string; changedByName: string; oldStatus: string; newStatus: string; timestamp: string;
@@ -31,6 +33,8 @@ export default function TaskModal({ task, onClose }: Props) {
             <img src={task.imageUrl} alt="attachment" className="w-full h-48 object-cover rounded-xl" />
           )}
 
+          {task.taskId && <ImageUpload taskId={task.taskId} />}
+
           <p className="text-gray-600">{task.description}</p>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -42,10 +46,8 @@ export default function TaskModal({ task, onClose }: Props) {
             </div>
           </div>
 
-          {/* Comments section — M3 will plug their CommentThread component here */}
           <div className="border-t pt-4">
-            <h3 className="font-semibold text-gray-700 mb-2">Comments</h3>
-            <p className="text-sm text-gray-400 italic">Comments coming from M3</p>
+            {task.taskId && <CommentThread taskId={task.taskId} />}
           </div>
 
           {/* Audit log */}

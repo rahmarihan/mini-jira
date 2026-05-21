@@ -35,5 +35,17 @@ export class CreateTaskDto {
 
   @IsString()
   @IsOptional()
+  imageKey?: string;
+
+  @IsString()
+  @IsOptional()
   imageUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  thumbnailKey?: string;
+
+  @IsString()
+  @IsOptional()
+  thumbnailUrl?: string;
 }
