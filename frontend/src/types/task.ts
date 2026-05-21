@@ -13,7 +13,10 @@ export interface Task {
   assigneeName: string;
   teamId: string;
   projectId?: string;
+  imageKey?: string;
   imageUrl?: string;
+  thumbnailKey?: string;
+  thumbnailUrl?: string;
   createdBy: string;
   createdByName: string;
   createdAt: string;
