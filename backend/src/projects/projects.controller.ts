@@ -1,18 +1,29 @@
 // backend/src/projects/projects.controller.ts
-import { Controller, Get, Post, Patch, Delete, Param, Body } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import type { CreateProjectDto } from './dto/create-project.dto';
 import type { UpdateProjectDto } from './dto/update-project.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { Roles } from '../common/guards/roles.guard';
+import { Roles, RolesGuard } from '../common/guards/roles.guard';
+import { CognitoAuthGuard } from '../auth/cognito-auth.guard';
 
 @Controller('projects')
+@UseGuards(CognitoAuthGuard, RolesGuard)
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
-  @Roles('manager')
+  @Roles('Manager')
   create(@Body() dto: CreateProjectDto, @CurrentUser() user: CurrentUserPayload) {
     return this.projectsService.create(dto, user);
   }
@@ -37,7 +48,7 @@ export class ProjectsController {
   }
 
   @Delete(':id')
-  @Roles('manager')
+  @Roles('Manager')
   remove(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
     return this.projectsService.remove(id, user);
   }

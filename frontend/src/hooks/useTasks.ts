@@ -3,26 +3,37 @@
 import { useState, useEffect, useCallback } from 'react';
 import { taskService } from '../services/task.service';
 import { Task, TaskStatus } from '../types/task';
+import { getErrorMessage } from '../lib/error';
 
-export function useTasks(teamId?: string) {
+export function useTasks(teamId?: string, enabled = true) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
+    if (!enabled) {
+      setTasks([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       const data = await taskService.getAll(teamId);
       setTasks(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch tasks');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to fetch tasks'));
     } finally {
       setLoading(false);
     }
-  }, [teamId]);
+  }, [enabled, teamId]);
 
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchTasks();
+  }, [fetchTasks]);
 
   const createTask = async (data: Partial<Task>) => {
     const task = await taskService.create(data);

@@ -1,6 +1,7 @@
 // frontend/src/components/tasks/EditTaskForm.tsx
 'use client';
 import { useState } from 'react';
+import { getErrorMessage } from '../../lib/error';
 import { Task } from '../../types/task';
 
 interface Props {
@@ -27,7 +28,7 @@ export default function EditTaskForm({ task, onSubmit, onCancel }: Props) {
   const handleSubmit = async () => {
     setLoading(true);
     try { await onSubmit(task.taskId, form); onCancel(); }
-    catch (err: any) { setError(err.response?.data?.message || 'Failed to update task'); }
+    catch (err: unknown) { setError(getErrorMessage(err, 'Failed to update task')); }
     finally { setLoading(false); }
   };
 

@@ -1,5 +1,9 @@
 // backend/src/app.module.ts
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { awsConfig } from '../config/aws.config';
+import { cognitoConfig } from '../config/cognito.config';
+import { validate } from '../config/env.validation';
 import { DynamoModule } from './dynamo/dynamo.module';
 import { AuthModule } from './auth/auth.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -13,6 +17,11 @@ import { AppService } from './app.service';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [awsConfig, cognitoConfig],
+      validate,
+    }),
     DynamoModule,
     AuthModule,
     TasksModule,

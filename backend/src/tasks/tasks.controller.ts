@@ -1,7 +1,14 @@
 // backend/src/tasks/tasks.controller.ts
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, Query,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 
 import { TasksService } from './tasks.service';
@@ -14,17 +21,16 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 
 import { Roles } from '../common/guards/roles.guard';
-
-// NOTE: Replace 'CognitoAuthGuard' import path once M1 finalises their auth module
-// import { CognitoAuthGuard } from '../auth/cognito-auth.guard';
-// @UseGuards(CognitoAuthGuard)
+import { RolesGuard } from '../common/guards/roles.guard';
+import { CognitoAuthGuard } from '../auth/cognito-auth.guard';
 
 @Controller('tasks')
+@UseGuards(CognitoAuthGuard, RolesGuard)
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
-  @Roles('manager')
+  @Roles('Manager')
   create(@Body() dto: CreateTaskDto, @CurrentUser() user: CurrentUserPayload) {
     return this.tasksService.create(dto, user);
   }
@@ -61,13 +67,16 @@ export class TasksController {
   }
 
   @Delete(':id')
-  @Roles('manager')
+  @Roles('Manager')
   remove(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
     return this.tasksService.remove(id, user);
   }
 
   @Get(':id/audit-log')
-  getAuditLog(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+  getAuditLog(
+    @Param('id') id: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
     return this.tasksService.getAuditLog(id, user);
   }
 }
