@@ -69,12 +69,37 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   DYNAMODB_FALLBACK_TO_MEMORY = 'true';
+
+  @IsString()
+  @IsOptional()
+  TASK_ASSIGNMENT_TOPIC_ARN?: string;
+
+  @IsString()
+  @IsOptional()
+  DAILY_DIGEST_TOPIC_ARN?: string;
+
+  @IsString()
+  @IsOptional()
+  TASK_ASSIGNMENT_QUEUE_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  TASK_ASSIGNMENT_DLQ_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  ASSIGNMENT_WORKER_LAMBDA_ARN?: string;
+
+  @IsString()
+  @IsOptional()
+  DAILY_REMINDER_LAMBDA_ARN?: string;
 }
 
 export function validate(config: Record<string, unknown>) {
   const validatedConfig = plainToInstance(EnvironmentVariables, config, {
     enableImplicitConversion: true,
   });
+
   const errors = validateSync(validatedConfig, {
     skipMissingProperties: false,
   });
@@ -85,7 +110,9 @@ export function validate(config: Record<string, unknown>) {
 
   return {
     ...config,
+
     AWS_REGION: validatedConfig.AWS_REGION,
+
     COGNITO_USER_POOL_ID: validatedConfig.COGNITO_USER_POOL_ID,
     COGNITO_CLIENT_ID: validatedConfig.COGNITO_CLIENT_ID,
     COGNITO_ISSUER:
@@ -93,14 +120,27 @@ export function validate(config: Record<string, unknown>) {
       `https://cognito-idp.${validatedConfig.AWS_REGION}.amazonaws.com/${validatedConfig.COGNITO_USER_POOL_ID}`,
     COGNITO_DEMO_CONFIRMATION_EMAIL:
       validatedConfig.COGNITO_DEMO_CONFIRMATION_EMAIL,
+
     DYNAMODB_USERS_TABLE: validatedConfig.DYNAMODB_USERS_TABLE,
     DYNAMODB_TEAMS_TABLE: validatedConfig.DYNAMODB_TEAMS_TABLE,
     DYNAMODB_TASKS_TABLE: validatedConfig.DYNAMODB_TASKS_TABLE,
     DYNAMODB_PROJECTS_TABLE: validatedConfig.DYNAMODB_PROJECTS_TABLE,
     DYNAMODB_AUDIT_LOG_TABLE: validatedConfig.DYNAMODB_AUDIT_LOG_TABLE,
     DYNAMODB_COMMENTS_TABLE: validatedConfig.DYNAMODB_COMMENTS_TABLE,
+    DYNAMODB_ACTIVITY_LOGS_TABLE: validatedConfig.DYNAMODB_ACTIVITY_LOGS_TABLE,
+    DYNAMODB_FALLBACK_TO_MEMORY: validatedConfig.DYNAMODB_FALLBACK_TO_MEMORY,
+
+    FRONTEND_ORIGIN: validatedConfig.FRONTEND_ORIGIN,
+    CLOUDWATCH_METRICS_ENABLED: validatedConfig.CLOUDWATCH_METRICS_ENABLED,
+
     S3_ORIGINAL_IMAGES_BUCKET: validatedConfig.S3_ORIGINAL_IMAGES_BUCKET,
     S3_RESIZED_IMAGES_BUCKET: validatedConfig.S3_RESIZED_IMAGES_BUCKET,
-    DYNAMODB_FALLBACK_TO_MEMORY: validatedConfig.DYNAMODB_FALLBACK_TO_MEMORY,
+
+    TASK_ASSIGNMENT_TOPIC_ARN: validatedConfig.TASK_ASSIGNMENT_TOPIC_ARN,
+    DAILY_DIGEST_TOPIC_ARN: validatedConfig.DAILY_DIGEST_TOPIC_ARN,
+    TASK_ASSIGNMENT_QUEUE_URL: validatedConfig.TASK_ASSIGNMENT_QUEUE_URL,
+    TASK_ASSIGNMENT_DLQ_URL: validatedConfig.TASK_ASSIGNMENT_DLQ_URL,
+    ASSIGNMENT_WORKER_LAMBDA_ARN: validatedConfig.ASSIGNMENT_WORKER_LAMBDA_ARN,
+    DAILY_REMINDER_LAMBDA_ARN: validatedConfig.DAILY_REMINDER_LAMBDA_ARN,
   };
 }
