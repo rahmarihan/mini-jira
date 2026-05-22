@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://mini-jira-alb-74822711.eu-north-1.elb.amazonaws.com/:path*"
+    }
+  ]
+}
