@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BarChart3,
-  FolderKanban,
   LayoutDashboard,
   LayoutGrid,
   Users,
@@ -28,7 +27,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, managerOnly: true },
   { href: '/kanban', label: 'Kanban', icon: LayoutGrid },
-  { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/reports', label: 'Team Reports', icon: BarChart3, managerOnly: true },
 ];
 
