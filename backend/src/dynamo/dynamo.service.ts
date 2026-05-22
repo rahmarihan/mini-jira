@@ -20,7 +20,7 @@ export class DynamoService {
 
   constructor() {
     this.client = new DynamoDBClient({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: process.env.AWS_REGION || 'eu-north-1',
     });
   }
 
