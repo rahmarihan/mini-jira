@@ -12,6 +12,12 @@ import { ResendConfirmationDto } from './dto/resend-confirmation.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Get('users')
+  @UseGuards(CognitoAuthGuard)
+  getAllUsers() {
+    return this.authService.getAllUsers();
+  }
+
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);

@@ -66,14 +66,28 @@ export class DynamoService {
     key: Record<string, any>,
     updates: Record<string, any>,
   ): Promise<Record<string, any>> {
+    // Filter out undefined values before building expressions
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([, v]) => v !== undefined),
+    );
+
+    if (Object.keys(filteredUpdates).length === 0) {
+      // Nothing to update — fetch and return current item
+      const current = await this.getItem(tableName, key);
+      return current ?? {};
+    }
+
     const updateExpressions: string[] = [];
     const expressionAttributeNames: Record<string, string> = {};
-    const expressionAttributeValues: Record<string, unknown> = {};
+    const marshaledValues: Record<string, any> = {};
 
-    Object.entries(updates).forEach(([k, v]) => {
-      updateExpressions.push(`#${k} = :${k}`);
-      expressionAttributeNames[`#${k}`] = k;
-      expressionAttributeValues[`:${k}`] = v;
+    Object.entries(filteredUpdates).forEach(([k, v]) => {
+      const nameKey = `#attr_${k}`;
+      const valueKey = `:val_${k}`;
+      updateExpressions.push(`${nameKey} = ${valueKey}`);
+      expressionAttributeNames[nameKey] = k;
+      // marshall the individual value directly
+      marshaledValues[valueKey] = marshall({ _: v })._;
     });
 
     try {
@@ -83,9 +97,7 @@ export class DynamoService {
           Key: marshall(key),
           UpdateExpression: `SET ${updateExpressions.join(', ')}`,
           ExpressionAttributeNames: expressionAttributeNames,
-          ExpressionAttributeValues: marshall(expressionAttributeValues, {
-            removeUndefinedValues: true,
-          }),
+          ExpressionAttributeValues: marshaledValues,
           ReturnValues: 'ALL_NEW',
         }),
       );
@@ -93,7 +105,7 @@ export class DynamoService {
     } catch (error) {
       if (!this.shouldUseLocalFallback(error)) throw error;
       this.warnAboutLocalFallback(error);
-      return this.localUpdateItem(tableName, key, updates);
+      return this.localUpdateItem(tableName, key, filteredUpdates);
     }
   }
 
@@ -125,7 +137,9 @@ export class DynamoService {
           IndexName: indexName,
           KeyConditionExpression: '#key = :value',
           ExpressionAttributeNames: { '#key': keyName },
-          ExpressionAttributeValues: marshall({ ':value': keyValue }),
+          ExpressionAttributeValues: {
+            ':value': marshall({ _: keyValue })._,
+          },
         }),
       );
       return (result.Items || []).map((item) => unmarshall(item));

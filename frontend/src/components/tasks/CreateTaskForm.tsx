@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getErrorMessage } from '../../lib/error';
 import { Task, Priority } from '../../types/task';
-import { userService, type Team } from '../../services/user.service';
+import { userService } from '../../services/user.service';
+import { projectService } from '../../services/project.service';
 import type { User } from '../../types/user';
+import type { Project } from '../../types/project';
 
 interface Props {
   onSubmit: (data: Partial<Task>) => Promise<Task>;
@@ -13,48 +15,52 @@ interface Props {
 }
 
 export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props) {
-  const [form, setForm] = useState<{
-    title: string;
-    description: string;
-    priority: Priority;
-    deadline: string;
-    assigneeId: string;
-    assigneeName: string;
-    teamId: string;
-    projectId: string;
-  }>({
+  const [form, setForm] = useState({
     title: '',
     description: '',
-    priority: 'MEDIUM',
+    priority: 'MEDIUM' as Priority,
     deadline: '',
     assigneeId: '',
     assigneeName: '',
     teamId: '',
     projectId: '',
   });
+
   const [loading, setLoading] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [error, setError] = useState('');
-  const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     if (!isManager) return;
 
-    async function loadAssignmentData() {
+    async function loadFormData() {
+      setLoadingUsers(true);
+      setError('');
+
       try {
-        const [loadedTeams, loadedUsers] = await Promise.all([
-          userService.getTeams(),
+        const [loadedUsers, loadedProjects] = await Promise.all([
           userService.getUsers(),
+          projectService.getAll(),
         ]);
-        setTeams(loadedTeams);
-        setUsers(loadedUsers.filter((user) => user.role && user.teamId));
+
+        setUsers(loadedUsers);
+        setProjects(loadedProjects);
       } catch (err: unknown) {
-        setError(getErrorMessage(err, 'Failed to load assignment data'));
+        setError(getErrorMessage(err, 'Failed to load task form data'));
+      } finally {
+        setLoadingUsers(false);
       }
     }
 
-    void loadAssignmentData();
+    void loadFormData();
   }, [isManager]);
+
+  const assignableUsers = useMemo(
+    () => users.filter((user) => user.role === 'Employee' && user.teamId),
+    [users],
+  );
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -62,14 +68,24 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props)
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const applyAssignee = (userId: string) => {
-    const selected = users.find((user) => user.userId === userId);
-    if (!selected) return;
+  const handleAssigneeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = users.find((user) => user.userId === e.target.value);
+
+    if (!selected) {
+      setForm((prev) => ({
+        ...prev,
+        assigneeId: '',
+        assigneeName: '',
+        teamId: '',
+      }));
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
-      assigneeName: selected.name || selected.email,
       assigneeId: selected.userId,
-      teamId: selected.teamId || prev.teamId,
+      assigneeName: selected.name || selected.email,
+      teamId: selected.teamId || '',
     }));
   };
 
@@ -80,8 +96,13 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props)
     }
 
     setLoading(true);
+    setError('');
+
     try {
-      await onSubmit(form);
+      await onSubmit({
+        ...form,
+        projectId: form.projectId || undefined,
+      });
       onCancel();
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to create task'));
@@ -97,89 +118,111 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props)
         {error && <p className="mb-3 text-sm text-red-500">{error}</p>}
 
         <div className="space-y-3">
-          <input
-            name="title"
-            placeholder="Title *"
-            value={form.title}
-            onChange={handleChange}
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <textarea
-            name="description"
-            placeholder="Description"
-            value={form.description}
-            onChange={handleChange}
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={3}
-          />
-          <select
-            name="priority"
-            value={form.priority}
-            onChange={handleChange}
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="LOW">Low Priority</option>
-            <option value="MEDIUM">Medium Priority</option>
-            <option value="HIGH">High Priority</option>
-          </select>
-          <input
-            name="deadline"
-            type="date"
-            value={form.deadline}
-            onChange={handleChange}
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-
-          {isManager && (
-            <>
-              <label className="block text-xs font-medium text-gray-600">
-                Assignee
-              </label>
-              <select
-                defaultValue=""
-                onChange={(e) => {
-                  if (e.target.value) applyAssignee(e.target.value);
-                }}
-                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select assignee</option>
-                {users.map((user) => (
-                  <option key={user.userId} value={user.userId}>
-                    {user.name || user.email} ({user.teamId})
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
-
-          <input
-            name="assigneeName"
-            placeholder="Assignee Name *"
-            value={form.assigneeName}
-            onChange={handleChange}
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            name="assigneeId"
-            placeholder="Assignee ID (Cognito sub) *"
-            value={form.assigneeId}
-            onChange={handleChange}
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {isManager && (
-            <select
-              name="teamId"
-              value={form.teamId}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              Title *
+            </label>
+            <input
+              name="title"
+              placeholder="Task title"
+              value={form.title}
               onChange={handleChange}
               className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              Description
+            </label>
+            <textarea
+              name="description"
+              placeholder="Describe the task..."
+              value={form.description}
+              onChange={handleChange}
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Priority
+              </label>
+              <select
+                name="priority"
+                value={form.priority}
+                onChange={handleChange}
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Deadline *
+              </label>
+              <input
+                name="deadline"
+                type="date"
+                value={form.deadline}
+                onChange={handleChange}
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              Assignee *
+            </label>
+            <select
+              onChange={handleAssigneeChange}
+              value={form.assigneeId}
+              disabled={loadingUsers}
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              <option value="">Team *</option>
-              {teams.map((team) => (
-                <option key={team.teamId} value={team.teamId}>
-                  {team.name || team.teamId}
+              <option value="">
+                {loadingUsers ? 'Loading employees...' : 'Select assignee'}
+              </option>
+              {assignableUsers.map((user) => (
+                <option key={user.userId} value={user.userId}>
+                  {user.name || user.email} - {user.teamId} team
                 </option>
               ))}
             </select>
+
+            {form.teamId && (
+              <p className="mt-1 px-1 text-xs text-gray-400">
+                Team auto-assigned:{' '}
+                <span className="font-medium text-gray-600">{form.teamId}</span>
+              </p>
+            )}
+          </div>
+
+          {projects.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Project optional
+              </label>
+              <select
+                name="projectId"
+                value={form.projectId}
+                onChange={handleChange}
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">No project</option>
+                {projects.map((project) => (
+                  <option key={project.projectId} value={project.projectId}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
 

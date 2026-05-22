@@ -24,7 +24,19 @@ export class FilesController {
     @Body() body: CreateUploadUrlBody,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    await this.tasksService.findOne(taskId, user);
-    return this.filesService.createTaskImageUploadUrl(taskId, body);
+    const upload = await this.filesService.createTaskImageUploadUrl(taskId, body);
+
+    await this.tasksService.update(
+      taskId,
+      {
+        imageKey: upload.imageKey,
+        imageUrl: upload.imageUrl,
+        thumbnailKey: upload.thumbnailKey,
+        thumbnailUrl: upload.thumbnailUrl,
+      },
+      user,
+    );
+
+    return upload;
   }
 }

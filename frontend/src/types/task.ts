@@ -1,6 +1,5 @@
-// frontend/src/types/task.ts
-export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
-export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type TaskStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+export type Priority = "LOW" | "MEDIUM" | "HIGH";
 
 export interface Task {
   taskId: string;
@@ -13,10 +12,15 @@ export interface Task {
   assigneeName: string;
   teamId: string;
   projectId?: string;
+
   imageKey?: string;
   imageUrl?: string;
+  imageViewUrl?: string;
+
   thumbnailKey?: string;
   thumbnailUrl?: string;
+  thumbnailViewUrl?: string;
+
   createdBy: string;
   createdByName: string;
   createdAt: string;
@@ -24,10 +28,15 @@ export interface Task {
 }
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
-  TODO: 'To Do',
-  IN_PROGRESS: 'In Progress',
-  IN_REVIEW: 'In Review',
-  DONE: 'Done',
+  TODO: "To Do",
+  IN_PROGRESS: "In Progress",
+  IN_REVIEW: "In Review",
+  DONE: "Done",
 };
 
-export const STATUS_ORDER: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
+export const STATUS_ORDER: TaskStatus[] = [
+  "TODO",
+  "IN_PROGRESS",
+  "IN_REVIEW",
+  "DONE",
+];

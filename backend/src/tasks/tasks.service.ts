@@ -57,6 +57,7 @@ export class TasksService {
   }
 
   async create(dto: CreateTaskDto, user: CurrentUserPayload) {
+    console.log('DEBUG create dto:', JSON.stringify(dto)); // remove after confirming
     if (!isManager(user)) {
       throw new ForbiddenException('Only managers can create tasks');
     }

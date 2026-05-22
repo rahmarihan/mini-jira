@@ -53,6 +53,11 @@ export class AuthService {
     });
   }
 
+  // add this method inside AuthService class
+  async getAllUsers() {
+    return this.dynamo.scan(this.usersTable);
+  }
+
   async login(dto: LoginDto) {
     try {
       const result = await this.initiatePasswordAuth(dto.email, dto.password);
