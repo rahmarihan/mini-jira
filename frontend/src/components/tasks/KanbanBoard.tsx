@@ -1,14 +1,19 @@
-'use client';
-import { useState } from 'react';
+"use client";
+import { useState } from "react";
 import {
-  DndContext, DragEndEvent, DragOverlay,
-  closestCenter, PointerSensor, useSensor, useSensors,
-} from '@dnd-kit/core';
-import { Task, TaskStatus, STATUS_ORDER } from '../../types/task';
-import KanbanColumn from './KanbanColumn';
-import TaskCard from './TaskCard';
-import TaskModal from './TaskModal';
-import { useTaskStore } from '../../store/task.store';
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { Task, TaskStatus, STATUS_ORDER } from "../../types/task";
+import KanbanColumn from "./KanbanColumn";
+import TaskCard from "./TaskCard";
+import TaskModal from "./TaskModal";
+import { useTaskStore } from "../../store/task.store";
 
 interface Props {
   tasks: Task[];
@@ -18,27 +23,44 @@ interface Props {
   isManager?: boolean;
 }
 
-export default function KanbanBoard({ tasks, onStatusChange, onDeleteTask, loading, isManager }: Props) {
+export default function KanbanBoard({
+  tasks,
+  onStatusChange,
+  onDeleteTask,
+  loading,
+  isManager,
+}: Props) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const { openModal, isModalOpen, selectedTask, closeModal } = useTaskStore();
 
-  const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: { distance: 8 },
-  }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  );
 
   const getTasksByStatus = (status: TaskStatus) =>
     tasks.filter((t) => t.status === status);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveTask(null);
     if (!over) return;
+
     const taskId = active.id as string;
     const newStatus = over.id as TaskStatus;
     const task = tasks.find((t) => t.taskId === taskId);
-    if (task && task.status !== newStatus) {
-      await onStatusChange(taskId, newStatus);
+    if (!task || task.status === newStatus) return;
+
+    const currentIndex = STATUS_ORDER.indexOf(task.status);
+    const newIndex = STATUS_ORDER.indexOf(newStatus);
+
+    if (Math.abs(newIndex - currentIndex) !== 1) {
+      alert(`You can only move one step at a time. "${task.title}" is currently "${task.status}".`);
+      return;
     }
-    setActiveTask(null);
+
+    await onStatusChange(taskId, newStatus);
   };
 
   if (loading) {
@@ -56,7 +78,9 @@ export default function KanbanBoard({ tasks, onStatusChange, onDeleteTask, loadi
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragStart={(e) => setActiveTask(tasks.find((t) => t.taskId === e.active.id) || null)}
+        onDragStart={(e) =>
+          setActiveTask(tasks.find((t) => t.taskId === e.active.id) || null)
+        }
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-4 gap-4">

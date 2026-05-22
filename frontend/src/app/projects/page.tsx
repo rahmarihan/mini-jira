@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-import { useAuth } from '../../hooks/useAuth';
-import { useAuthStore } from '../../store/auth.store';
-import { projectService } from '../../services/project.service';
+import { useAuth } from "../../hooks/useAuth";
+import { useAuthStore } from "../../store/auth.store";
+import { projectService } from "../../services/project.service";
 
-import type { Project } from '../../types/project';
+import type { Project } from "../../types/project";
 
-import { getErrorMessage } from '../../lib/error';
+import { getErrorMessage } from "../../lib/error";
 
 const EMPTY_FORM = {
-  name: '',
-  description: '',
+  name: "",
+  description: "",
 };
 
 export default function ProjectsPage() {
@@ -22,29 +22,28 @@ export default function ProjectsPage() {
 
   const { user, isAuthenticated, fetchMe } = useAuth();
 
-  const hydrateFromStorage = useAuthStore(
-    (s) => s.hydrateFromStorage,
-  );
+  const hydrateFromStorage = useAuthStore((s) => s.hydrateFromStorage);
 
   const idToken = useAuthStore((s) => s.idToken);
 
-  const isManager = user?.role === 'Manager';
+  const isManager = user?.role === "Manager";
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
 
-  const [editingProject, setEditingProject] =
-    useState<Project | null>(null);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState<{ name: string; description: string }>(
+    EMPTY_FORM,
+  );
 
   const [saving, setSaving] = useState(false);
 
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     hydrateFromStorage();
@@ -52,28 +51,25 @@ export default function ProjectsPage() {
   }, [fetchMe, hydrateFromStorage]);
 
   useEffect(() => {
-    if (
-      !isAuthenticated &&
-      !localStorage.getItem('mini-jira.idToken')
-    ) {
-      router.push('/auth/login');
+    if (!isAuthenticated && !localStorage.getItem("mini-jira.idToken")) {
+      router.push("/auth/login");
     }
   }, [isAuthenticated, router]);
 
-  const load = () => {
-    if (!idToken) return;
+  // Replace the load function and its useEffect with this:
 
+  const load = (token: string) => {
     setLoading(true);
-
     projectService
       .getAll()
       .then(setProjects)
-      .catch(() => setError('Failed to load projects'))
+      .catch(() => setError("Failed to load projects"))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    load();
+    if (!idToken) return;
+    load(idToken);
   }, [idToken]);
 
   const openCreate = () => {
@@ -81,7 +77,7 @@ export default function ProjectsPage() {
 
     setForm(EMPTY_FORM);
 
-    setFormError('');
+    setFormError("");
 
     setModalOpen(true);
   };
@@ -91,65 +87,55 @@ export default function ProjectsPage() {
 
     setForm({
       name: project.name,
-      description: project.description ?? '',
+      description: project.description ?? "",
     });
 
-    setFormError('');
+    setFormError("");
 
     setModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) {
-      setFormError('Project name is required');
+    
+   console.log('Frontend sending:', JSON.stringify(form)); // ← add this line
+
+    if (!form.name?.trim()) {
+      setFormError("Project name is required");
       return;
     }
 
     setSaving(true);
 
-    setFormError('');
+    setFormError("");
 
     try {
       if (editingProject) {
-        await projectService.update(
-          editingProject.projectId,
-          form,
-        );
+        await projectService.update(editingProject.projectId, form);
       } else {
         await projectService.create(form);
       }
 
       setModalOpen(false);
 
-      load();
+      load(idToken!);
     } catch (err) {
-      setFormError(
-        getErrorMessage(err, 'Failed to save project'),
-      );
+      setFormError(getErrorMessage(err, "Failed to save project"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (projectId: string) => {
-    if (
-      !confirm(
-        'Delete this project? This cannot be undone.',
-      )
-    ) {
+    if (!confirm("Delete this project? This cannot be undone.")) {
       return;
     }
 
     try {
       await projectService.delete(projectId);
 
-      setProjects((prev) =>
-        prev.filter((p) => p.projectId !== projectId),
-      );
+      setProjects((prev) => prev.filter((p) => p.projectId !== projectId));
     } catch (err) {
-      alert(
-        getErrorMessage(err, 'Failed to delete project'),
-      );
+      alert(getErrorMessage(err, "Failed to delete project"));
     }
   };
 
@@ -157,43 +143,30 @@ export default function ProjectsPage() {
     <div className="min-h-screen bg-gray-50">
       {/* NAVBAR */}
       <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <span className="text-lg font-bold text-gray-900">
-          Mini-Jira
-        </span>
+        <span className="text-lg font-bold text-gray-900">Mini-Jira</span>
 
         <div className="flex items-center gap-6 text-sm">
-          <Link
-            href="/dashboard"
-            className="text-gray-600 hover:text-gray-900"
-          >
+          <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
             Dashboard
           </Link>
 
-          <Link
-            href="/kanban"
-            className="text-gray-600 hover:text-gray-900"
-          >
+          <Link href="/kanban" className="text-gray-600 hover:text-gray-900">
             Kanban Board
           </Link>
 
-          <Link
-            href="/projects"
-            className="font-semibold text-blue-600"
-          >
+          <Link href="/projects" className="font-semibold text-blue-600">
             Projects
           </Link>
 
           <span className="text-gray-400">|</span>
 
-          <span className="text-gray-600">
-            {user?.name}
-          </span>
+          <span className="text-gray-600">{user?.name}</span>
 
           <span
             className={`text-xs px-2 py-0.5 rounded-full font-medium ${
               isManager
-                ? 'bg-purple-100 text-purple-700'
-                : 'bg-sky-100 text-sky-700'
+                ? "bg-purple-100 text-purple-700"
+                : "bg-sky-100 text-sky-700"
             }`}
           >
             {user?.role}
@@ -204,14 +177,12 @@ export default function ProjectsPage() {
       <main className="max-w-5xl mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Projects
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
 
             <p className="text-sm text-gray-500 mt-1">
               {isManager
-                ? 'Create and manage projects. Tasks are linked to projects.'
-                : 'Projects your team is working on.'}
+                ? "Create and manage projects. Tasks are linked to projects."
+                : "Projects your team is working on."}
             </p>
           </div>
 
@@ -225,11 +196,7 @@ export default function ProjectsPage() {
           )}
         </div>
 
-        {error && (
-          <p className="text-red-500 text-sm mb-4">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -242,9 +209,7 @@ export default function ProjectsPage() {
           </div>
         ) : projects.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-300 p-12 text-center">
-            <p className="text-gray-400 text-sm mb-3">
-              No projects yet.
-            </p>
+            <p className="text-gray-400 text-sm mb-3">No projects yet.</p>
 
             {isManager && (
               <button
@@ -269,12 +234,11 @@ export default function ProjectsPage() {
                 </div>
 
                 <p className="text-xs text-gray-400 line-clamp-3 flex-1">
-                  {project.description || 'No description'}
+                  {project.description || "No description"}
                 </p>
 
                 <p className="text-xs text-gray-300">
-                  Created by{' '}
-                  {project.createdByName ?? 'unknown'}
+                  Created by {project.createdByName ?? "unknown"}
                 </p>
 
                 {isManager && (
@@ -287,9 +251,7 @@ export default function ProjectsPage() {
                     </button>
 
                     <button
-                      onClick={() =>
-                        handleDelete(project.projectId)
-                      }
+                      onClick={() => handleDelete(project.projectId)}
                       className="flex-1 text-xs border border-red-100 rounded-md py-1.5 text-red-500 hover:bg-red-50"
                     >
                       Delete
@@ -307,15 +269,11 @@ export default function ProjectsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-gray-800 mb-4">
-              {editingProject
-                ? 'Edit Project'
-                : 'New Project'}
+              {editingProject ? "Edit Project" : "New Project"}
             </h2>
 
             {formError && (
-              <p className="text-red-500 text-sm mb-3">
-                {formError}
-              </p>
+              <p className="text-red-500 text-sm mb-3">{formError}</p>
             )}
 
             <div className="space-y-3">
@@ -369,10 +327,10 @@ export default function ProjectsPage() {
                 className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm hover:bg-blue-700 disabled:opacity-50"
               >
                 {saving
-                  ? 'Saving...'
+                  ? "Saving..."
                   : editingProject
-                  ? 'Save Changes'
-                  : 'Create Project'}
+                    ? "Save Changes"
+                    : "Create Project"}
               </button>
             </div>
           </div>
