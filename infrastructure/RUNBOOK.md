@@ -101,14 +101,16 @@ EC2 user-data loads all parameters into `/etc/mini-jira.env` for PM2.
 
 ### Dashboard widgets
 
-Deploy JSON (replace `REPLACE_*` placeholders in dashboard file with your ALB/TG/CloudFront IDs first):
+See **[infrastructure/cloudwatch/CLOUDWATCH-DASHBOARD.md](cloudwatch/CLOUDWATCH-DASHBOARD.md)** for full steps.
+
+Deploy (no manual ID placeholders — uses EC2 instance IDs + metric SEARCH for ALB/CloudFront):
 
 ```bash
 chmod +x infrastructure/cloudwatch/deploy-monitoring.sh
 ./infrastructure/cloudwatch/deploy-monitoring.sh
 ```
 
-Widgets cover: EC2 CPU, ALB health/requests, CloudFront errors, custom **MiniJira/Tasks** metrics, SNS publish counts, overdue count.
+Widgets: **EC2 CPU, status checks, network, memory (agent)**, ALB, CloudFront, **MiniJira/Tasks**, SNS, overdue count.
 
 ### Custom metrics (publish from app or Lambda)
 

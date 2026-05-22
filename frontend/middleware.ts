@@ -3,9 +3,8 @@ import type { NextRequest } from 'next/server';
 
 const PUBLIC_PATHS = ['/auth/login', '/auth/register'];
 
-function getAuthenticatedHome(request: NextRequest): string {
-  const role = request.cookies.get('role')?.value;
-  return role === 'Manager' ? '/dashboard' : '/kanban';
+function getAuthenticatedHome(): string {
+  return '/dashboard';
 }
 
 export function middleware(request: NextRequest) {
@@ -19,7 +18,7 @@ export function middleware(request: NextRequest) {
   }
   if (token && isPublic) {
     return NextResponse.redirect(
-      new URL(getAuthenticatedHome(request), request.url),
+      new URL(getAuthenticatedHome(), request.url),
     );
   }
   return NextResponse.next();

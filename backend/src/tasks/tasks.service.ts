@@ -53,6 +53,13 @@ export class TasksService {
   }
 
   async create(dto: CreateTaskDto, user: CurrentUserPayload) {
+    if (!isManager(user)) {
+      throw new ForbiddenException('Only managers can create tasks');
+    }
+    if (dto.teamId !== 'Frontend' && dto.teamId !== 'Backend') {
+      throw new BadRequestException('teamId must be Frontend or Backend');
+    }
+
     const task = {
       taskId: uuidv4(),
       ...dto,
@@ -74,6 +81,10 @@ export class TasksService {
     if (isManager(user)) {
       if (teamId) return all.filter((t) => t.teamId === teamId);
       return all;
+    }
+    // Employees: server-side team isolation — ignore teamId query param
+    if (user.teamId === 'ALL') {
+      throw new ForbiddenException('Invalid employee team scope');
     }
     return all.filter((task) => task.teamId === user.teamId);
   }

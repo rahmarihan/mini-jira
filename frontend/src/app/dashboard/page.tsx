@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import Link from 'next/link';
+import { LayoutGrid, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useAuthStore } from '@/src/store/auth.store';
@@ -11,6 +12,7 @@ import { useTaskStore } from '@/src/store/task.store';
 import { StatsCards } from '@/src/components/dashboard/StatsCards';
 import { DashboardSkeletonLoader } from '@/src/components/dashboard/SkeletonLoader';
 import CreateTaskForm from '@/src/components/tasks/CreateTaskForm';
+import ManagerTeamFilter from '@/src/components/tasks/ManagerTeamFilter';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -25,9 +27,23 @@ import { computeAssigneeStats, computeDashboardMetrics } from '@/src/lib/dashboa
 import { formatDate } from '@/lib/utils';
 import type { TeamId } from '@/src/types/user';
 
-function resolveTeamFilter(teamId?: TeamId): string | undefined {
+const MOCK_TEAMS = [
+  { teamId: 'Frontend', name: 'Frontend' },
+  { teamId: 'Backend', name: 'Backend' },
+];
+
+function resolveManagerTeamFilter(teamId?: TeamId): string | undefined {
   if (!teamId || teamId === 'ALL') return undefined;
   return teamId;
+}
+
+function dashboardSubtitle(user: { role: string; teamId?: TeamId }) {
+  if (user.role === 'Manager') {
+    return user.teamId === 'ALL'
+      ? 'Company-wide overview (all teams)'
+      : `Overview for ${user.teamId} team`;
+  }
+  return `Overview for ${user.teamId} team`;
 }
 
 export default function DashboardPage() {
@@ -36,11 +52,17 @@ export default function DashboardPage() {
   const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
   const idToken = useAuthStore((state) => state.idToken);
   const isManager = user?.role === 'Manager';
-  const teamFilter = resolveTeamFilter(user?.teamId);
+  const [managerTeamFilter, setManagerTeamFilter] = useState('');
+
+  const taskTeamScope = isManager
+    ? managerTeamFilter || resolveManagerTeamFilter(user?.teamId)
+    : user?.teamId && user.teamId !== 'ALL'
+      ? user.teamId
+      : undefined;
 
   const { tasks, loading, error, createTask } = useTasks(
-    teamFilter,
-    Boolean(idToken) && isManager,
+    taskTeamScope,
+    Boolean(idToken) && Boolean(user),
   );
   const { isCreateFormOpen, openCreateForm, closeCreateForm } = useTaskStore();
 
@@ -54,12 +76,6 @@ export default function DashboardPage() {
       router.push('/auth/login');
     }
   }, [isAuthenticated, router]);
-
-  useEffect(() => {
-    if (user && !isManager) {
-      router.replace('/kanban');
-    }
-  }, [user, isManager, router]);
 
   useEffect(() => {
     if (error) {
@@ -80,7 +96,7 @@ export default function DashboardPage() {
     [tasks],
   );
 
-  if (!user || !isManager) {
+  if (!user) {
     return <DashboardSkeletonLoader />;
   }
 
@@ -90,27 +106,54 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Team Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Overview for {user.teamId === 'ALL' ? 'all teams' : `${user.teamId} team`}
-          </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Team Dashboard</h1>
+            <Badge variant={isManager ? 'default' : 'secondary'}>
+              {isManager ? 'Manager' : 'Employee'}
+            </Badge>
+            {user.teamId && user.teamId !== 'ALL' && (
+              <Badge variant="outline">{user.teamId}</Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">{dashboardSubtitle(user)}</p>
         </div>
-        <Button onClick={openCreateForm} className="w-fit shrink-0">
-          <Plus className="size-4" />
-          New Task
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" asChild className="w-fit shrink-0">
+            <Link href="/kanban">
+              <LayoutGrid className="size-4" />
+              Kanban board
+            </Link>
+          </Button>
+          {isManager && (
+            <Button onClick={openCreateForm} className="w-fit shrink-0">
+              <Plus className="size-4" />
+              New Task
+            </Button>
+          )}
+        </div>
       </div>
+
+      {isManager && (
+        <ManagerTeamFilter
+          teams={MOCK_TEAMS}
+          selectedTeamId={managerTeamFilter}
+          onChange={setManagerTeamFilter}
+        />
+      )}
 
       <StatsCards metrics={metrics} />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* M4: replace with audit-log / activity feed API */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest task updates across your team</CardDescription>
+            <CardDescription>
+              {isManager
+                ? 'Latest task updates in your selected scope'
+                : `Latest updates on ${user.teamId} tasks`}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {recentTasks.length === 0 ? (
@@ -136,17 +179,20 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* M4: replace with analytics / reporting service */}
         <Card>
           <CardHeader>
             <CardTitle>Team Performance</CardTitle>
-            <CardDescription>Workload by assignee (client-side summary)</CardDescription>
+            <CardDescription>
+              {isManager
+                ? 'Workload by assignee in current view'
+                : `${user.teamId} team workload`}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {assigneeStats.length === 0 ? (
               <p className="text-sm text-muted-foreground">No assignee data available.</p>
             ) : (
-              assigneeStats.map((member) => {
+              assigneeStats.map((member, index) => {
                 const total = member.active + member.done;
                 const completionRate = total ? Math.round((member.done / total) * 100) : 0;
 
@@ -167,7 +213,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-muted-foreground">
                       {member.active} active · {completionRate}% completion
                     </p>
-                    <Separator />
+                    {index < assigneeStats.length - 1 && <Separator />}
                   </div>
                 );
               })
@@ -176,7 +222,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {isCreateFormOpen && (
+      {isCreateFormOpen && isManager && (
         <CreateTaskForm
           onSubmit={createTask}
           onCancel={closeCreateForm}

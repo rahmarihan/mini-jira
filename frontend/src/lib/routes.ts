@@ -1,6 +1,6 @@
 import type { UserRole } from '@/src/types/user';
 
-/** Default landing route after authentication, based on role. */
-export function getDefaultRoute(role?: UserRole): '/dashboard' | '/kanban' {
-  return role === 'Manager' ? '/dashboard' : '/kanban';
+/** Default landing route after authentication (all roles use dashboard first). */
+export function getDefaultRoute(_role?: UserRole): '/dashboard' {
+  return '/dashboard';
 }
