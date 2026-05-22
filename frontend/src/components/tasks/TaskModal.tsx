@@ -29,16 +29,16 @@ export default function TaskModal({ task, onClose }: Props) {
         </div>
 
         <div className="p-6 space-y-4">
-          {task.thumbnailUrl && (
+          {task.thumbnailViewUrl && (
             <img
-              src={task.thumbnailUrl}
+              src={task.thumbnailViewUrl}
               alt="Task thumbnail"
               style={{ maxWidth: '200px', borderRadius: '8px' }}
             />
           )}
 
-          {!task.thumbnailUrl && task.imageUrl && (
-            <img src={task.imageUrl} alt="attachment" className="w-full h-48 object-cover rounded-xl" />
+          {!task.thumbnailViewUrl && task.imageViewUrl && (
+            <img src={task.imageViewUrl} alt="attachment" className="w-full h-48 object-cover rounded-xl" />
           )}
 
           {task.taskId && <ImageUpload taskId={task.taskId} />}
