@@ -12,6 +12,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { CloudWatchMetricsService } from '../common/cloudwatch-metrics.service';
 import { isManager, STATUS_ORDER, TaskStatus } from '../common/types';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class TasksService {
   constructor(
     private readonly dynamo: DynamoService,
     private readonly auditLog: AuditLogService,
+    private readonly metrics: CloudWatchMetricsService,
   ) {}
 
   async create(dto: CreateTaskDto, user: CurrentUserPayload) {
@@ -35,6 +37,7 @@ export class TasksService {
       updatedAt: new Date().toISOString(),
     };
     await this.dynamo.putItem(this.tableName, task);
+    void this.metrics.taskCreated(dto.teamId);
     return task;
   }
 
@@ -92,6 +95,12 @@ export class TasksService {
       oldStatus: String(task.status),
       newStatus: dto.status,
     });
+
+    if (dto.status === 'DONE') {
+      const created = new Date(String(task.createdAt)).getTime();
+      const seconds = Math.round((Date.now() - created) / 1000);
+      void this.metrics.taskClosed(String(task.teamId), seconds);
+    }
 
     return updated;
   }

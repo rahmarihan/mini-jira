@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { getErrorMessage } from '../../lib/error';
+import { getDefaultRoute } from '../../lib/routes';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -17,8 +18,8 @@ export default function LoginForm() {
     setError(null);
 
     try {
-      await login(email, password);
-      router.push('/kanban');
+      const { user } = await login(email, password);
+      router.push(getDefaultRoute(user.role));
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Login failed'));
     }
