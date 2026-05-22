@@ -15,8 +15,10 @@ export interface Task {
   projectId?: string;
   imageKey?: string;
   imageUrl?: string;
+  imageViewUrl?: string;
   thumbnailKey?: string;
   thumbnailUrl?: string;
+  thumbnailViewUrl?: string;
   createdBy: string;
   createdByName: string;
   createdAt: string;

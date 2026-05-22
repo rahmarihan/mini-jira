@@ -80,17 +80,17 @@ export default function TaskCard({
       )}
 
       {/* ✅ merged: image support (other branch) */}
-      {task.thumbnailUrl && (
+      {task.thumbnailViewUrl && (
         <img
-          src={task.thumbnailUrl}
+          src={task.thumbnailViewUrl}
           alt="Task thumbnail"
           className="w-full h-24 object-cover rounded mb-2"
         />
       )}
 
-      {!task.thumbnailUrl && task.imageUrl && (
+      {!task.thumbnailViewUrl && task.imageViewUrl && (
         <img
-          src={task.imageUrl}
+          src={task.imageViewUrl}
           alt="task"
           className="w-full h-24 object-cover rounded mb-2"
         />
