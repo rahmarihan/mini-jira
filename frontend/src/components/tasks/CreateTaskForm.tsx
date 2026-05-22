@@ -1,45 +1,29 @@
 'use client';
 
-<<<<<<< HEAD
-import { useState } from 'react';
-import { getErrorMessage } from '../../lib/error';
 import NotificationToast from '../notifications/NotificationToast';
-import { Task, Priority } from '../../types/task';
-=======
 import { useState, useEffect } from 'react';
 import { getErrorMessage } from '../../lib/error';
 import { Task, Priority } from '../../types/task';
 import type { Project } from '../../types/project';
-import { DEMO_ASSIGNEE_PRESETS } from '../../config/demo-users';
-
 import { authService, UserOption } from '../../services/auth.service';
->>>>>>> 3e9e8b912f81a200d37f9c8297f37ea04314b865
 
 interface Props {
   onSubmit: (data: Partial<Task>) => Promise<Task>;
   onCancel: () => void;
   isManager: boolean;
-  projects?: Project[];  // optional list of projects to link task to
+  projects?: Project[];
 }
 
-<<<<<<< HEAD
-export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props) {
-=======
-export default function CreateTaskForm({ onSubmit, onCancel, isManager, projects = [] }: Props) {
->>>>>>> 3e9e8b912f81a200d37f9c8297f37ea04314b865
-  const [form, setForm] = useState<{
-    title: string;
-    description: string;
-    priority: Priority;
-    deadline: string;
-    assigneeId: string;
-    assigneeName: string;
-    teamId: string;
-    projectId: string;
-  }>({
+export default function CreateTaskForm({
+  onSubmit,
+  onCancel,
+  isManager,
+  projects = [],
+}: Props) {
+  const [form, setForm] = useState({
     title: '',
     description: '',
-    priority: 'MEDIUM',
+    priority: 'MEDIUM' as Priority,
     deadline: '',
     assigneeId: '',
     assigneeName: '',
@@ -47,38 +31,39 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager, projects
     projectId: '',
   });
 
-<<<<<<< HEAD
-=======
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
->>>>>>> 3e9e8b912f81a200d37f9c8297f37ea04314b865
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showToast, setShowToast] = useState(false);
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
-    authService.getAll()
+    authService
+      .getAll()
       .then(setUsers)
       .catch(() => setError('Failed to load users'))
       .finally(() => setLoadingUsers(false));
   }, []);
 
->>>>>>> 3e9e8b912f81a200d37f9c8297f37ea04314b865
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // When manager picks an assignee, auto-fill assigneeId, assigneeName, and teamId
   const handleAssigneeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = users.find((u) => u.userId === e.target.value);
+
     if (!selected) {
-      setForm((prev) => ({ ...prev, assigneeId: '', assigneeName: '', teamId: '' }));
+      setForm((prev) => ({
+        ...prev,
+        assigneeId: '',
+        assigneeName: '',
+        teamId: '',
+      }));
       return;
     }
+
     setForm((prev) => ({
       ...prev,
       assigneeId: selected.userId,
@@ -92,22 +77,11 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager, projects
       setError('Please fill in all required fields');
       return;
     }
+
     setLoading(true);
     setError('');
-<<<<<<< HEAD
 
     try {
-      await onSubmit(form);
-
-      setShowToast(true);
-
-      setTimeout(() => {
-        setShowToast(false);
-        onCancel();
-      }, 3000);
-=======
-    try {
-      // strip projectId if empty so it's omitted from the payload
       const payload: Partial<Task> = {
         title: form.title,
         description: form.description,
@@ -118,21 +92,23 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager, projects
         teamId: form.teamId,
         ...(form.projectId ? { projectId: form.projectId } : {}),
       };
+
       await onSubmit(payload);
-      onCancel();
->>>>>>> 3e9e8b912f81a200d37f9c8297f37ea04314b865
+
+      setShowToast(true);
+
+      setTimeout(() => {
+        setShowToast(false);
+        onCancel();
+      }, 2000);
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to create task'));
     } finally {
       setLoading(false);
     }
   };
-<<<<<<< HEAD
-=======
 
-  // Only employees can be assigned tasks
   const assignableUsers = users.filter((u) => u.role === 'Employee');
->>>>>>> 3e9e8b912f81a200d37f9c8297f37ea04314b865
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -142,21 +118,20 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager, projects
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
         <div className="space-y-3">
-<<<<<<< HEAD
           <input
             name="title"
-            placeholder="Title *"
+            placeholder="Task title *"
             value={form.title}
             onChange={handleChange}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm"
           />
 
           <textarea
             name="description"
-            placeholder="Description"
+            placeholder="Describe the task..."
             value={form.description}
             onChange={handleChange}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm"
             rows={3}
           />
 
@@ -164,11 +139,11 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager, projects
             name="priority"
             value={form.priority}
             onChange={handleChange}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm"
           >
-            <option value="LOW">Low Priority</option>
-            <option value="MEDIUM">Medium Priority</option>
-            <option value="HIGH">High Priority</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
           </select>
 
           <input
@@ -176,144 +151,60 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager, projects
             type="date"
             value={form.deadline}
             onChange={handleChange}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm"
           />
 
-          <input
-            name="assigneeId"
-            placeholder="Assignee ID *"
+          <select
+            onChange={handleAssigneeChange}
             value={form.assigneeId}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-
-          <input
-            name="assigneeName"
-            placeholder="Assignee Name *"
-            value={form.assigneeName}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-
-          {isManager && (
-            <input
-              name="teamId"
-              placeholder="Team ID *"
-              value={form.teamId}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-=======
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Title *</label>
-            <input
-              name="title"
-              placeholder="Task title"
-              value={form.title}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
-            <textarea
-              name="description"
-              placeholder="Describe the task..."
-              value={form.description}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Priority</label>
-              <select
-                name="priority"
-                value={form.priority}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Deadline *</label>
-              <input
-                name="deadline"
-                type="date"
-                value={form.deadline}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Assignee *</label>
-            <select
-              onChange={handleAssigneeChange}
-              value={form.assigneeId}
-              disabled={loadingUsers}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              <option value="">
-                {loadingUsers ? 'Loading employees...' : 'Select assignee'}
+            disabled={loadingUsers}
+            className="w-full border rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+          >
+            <option value="">
+              {loadingUsers ? 'Loading employees...' : 'Select assignee'}
+            </option>
+            {assignableUsers.map((u) => (
+              <option key={u.userId} value={u.userId}>
+                {u.name || u.email} — {u.teamId} team
               </option>
-              {assignableUsers.map((u) => (
-                <option key={u.userId} value={u.userId}>
-                  {u.name || u.email} — {u.teamId} team
+            ))}
+          </select>
+
+          {form.teamId && (
+            <p className="text-xs text-gray-400">
+              Team auto-assigned:{' '}
+              <span className="font-medium text-gray-600">{form.teamId}</span>
+            </p>
+          )}
+
+          {projects.length > 0 && (
+            <select
+              name="projectId"
+              value={form.projectId}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">No project</option>
+              {projects.map((p) => (
+                <option key={p.projectId} value={p.projectId}>
+                  {p.name}
                 </option>
               ))}
             </select>
-            {form.teamId && (
-              <p className="text-xs text-gray-400 mt-1 px-1">
-                Team auto-assigned: <span className="font-medium text-gray-600">{form.teamId}</span>
-              </p>
-            )}
-          </div>
-
-          {/* Project dropdown — optional */}
-          {projects.length > 0 && (
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Project (optional)</label>
-              <select
-                name="projectId"
-                value={form.projectId}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">No project</option>
-                {projects.map((p) => (
-                  <option key={p.projectId} value={p.projectId}>{p.name}</option>
-                ))}
-              </select>
-            </div>
->>>>>>> 3e9e8b912f81a200d37f9c8297f37ea04314b865
           )}
         </div>
 
         <div className="flex gap-3 mt-6">
           <button
             onClick={onCancel}
-            className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm hover:bg-gray-50"
+            className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm"
           >
             Cancel
           </button>
-<<<<<<< HEAD
 
           <button
             onClick={handleSubmit}
-            disabled={loading}
-=======
-          <button
-            onClick={handleSubmit}
             disabled={loading || loadingUsers}
->>>>>>> 3e9e8b912f81a200d37f9c8297f37ea04314b865
             className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Task'}
