@@ -72,10 +72,13 @@ export class FilesService {
   }
 
   async deleteTaskImages(imageKey?: string, thumbnailKey?: string) {
+    const originalBucket = process.env.S3_ORIGINAL_BUCKET || this.originalsBucket;
+    const resizedBucket = process.env.S3_RESIZED_BUCKET || this.resizedBucket;
+
     if (imageKey) {
       await this.s3.send(
         new DeleteObjectCommand({
-          Bucket: this.originalsBucket,
+          Bucket: originalBucket,
           Key: imageKey,
         }),
       );
@@ -84,7 +87,7 @@ export class FilesService {
     if (thumbnailKey) {
       await this.s3.send(
         new DeleteObjectCommand({
-          Bucket: this.resizedBucket,
+          Bucket: resizedBucket,
           Key: thumbnailKey,
         }),
       );
