@@ -31,7 +31,30 @@ export class TasksService {
   constructor(
     private readonly dynamo: DynamoService,
     private readonly auditLog: AuditLogService,
+    private readonly metrics: CloudWatchMetricsService,
+    @Inject(forwardRef(() => FilesService))
+    private readonly filesService: FilesService,
   ) {}
+
+  private async publishTaskAssigned(task: any, assignedBy: string) {
+    try {
+      await this.snsClient.send(
+        new PublishCommand({
+          TopicArn: 'arn:aws:sns:eu-north-1:507210367772:task-assignment-topic',
+          Message: JSON.stringify({
+            eventType: 'TASK_ASSIGNED',
+            taskId: task.taskId,
+            title: task.title,
+            teamId: task.teamId,
+            assignedBy,
+            assignee: task.assigneeName,
+          }),
+        }),
+      );
+    } catch (err) {
+      console.error('SNS publish failed:', err);
+    }
+  }
 
   async create(dto: CreateTaskDto, user: CurrentUserPayload) {
     if (!isManager(user)) {
