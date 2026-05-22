@@ -4,10 +4,13 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { DynamoService } from '../dynamo/dynamo.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { FilesService } from '../files/files.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
@@ -22,11 +25,13 @@ export class TasksService {
   constructor(
     private readonly dynamo: DynamoService,
     private readonly auditLog: AuditLogService,
+    @Inject(forwardRef(() => FilesService))
+    private readonly filesService: FilesService,
   ) {}
 
   async create(dto: CreateTaskDto, user: CurrentUserPayload) {
     const task = {
-      taskId: uuidv4(),
+      taskId: randomUUID(),
       ...dto,
       status: 'TODO' as TaskStatus,
       createdBy: user.sub,
@@ -100,7 +105,8 @@ export class TasksService {
     if (!isManager(user)) {
       throw new ForbiddenException('Only managers can delete tasks');
     }
-    await this.findOne(taskId, user);
+    const task = await this.findOne(taskId, user);
+    await this.filesService.deleteTaskImages(task.imageKey, task.thumbnailKey);
     await this.dynamo.deleteItem(this.tableName, { taskId });
     return { message: 'Task deleted successfully' };
   }

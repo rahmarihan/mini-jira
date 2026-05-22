@@ -20,8 +20,10 @@ export default function ImageUpload({ taskId }: Props) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please choose an image file.');
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+
+    if (!allowedTypes.includes(file.type)) {
+      setError('Only JPG, JPEG, and PNG images are allowed.');
       return;
     }
 
@@ -62,7 +64,7 @@ export default function ImageUpload({ taskId }: Props) {
           className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          {uploading ? 'Uploading' : 'Upload'}
+          {uploading ? 'Uploading' : 'Upload / Replace Image'}
         </button>
       </div>
 

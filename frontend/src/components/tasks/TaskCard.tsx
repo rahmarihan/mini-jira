@@ -33,7 +33,15 @@ export default function TaskCard({ task, onClick }: Props) {
       className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer
         hover:shadow-md hover:border-blue-300 transition-all"
     >
-      {task.imageUrl && (
+      {task.thumbnailUrl && (
+        <img
+          src={task.thumbnailUrl}
+          alt="Task thumbnail"
+          style={{ width: '100%', borderRadius: '8px' }}
+        />
+      )}
+
+      {!task.thumbnailUrl && task.imageUrl && (
         <img src={task.imageUrl} alt="task" className="w-full h-24 object-cover rounded mb-2" />
       )}
       <p className="font-medium text-gray-800 text-sm mb-2 line-clamp-2">{task.title}</p>

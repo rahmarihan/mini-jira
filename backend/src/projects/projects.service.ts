@@ -4,7 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { DynamoService } from '../dynamo/dynamo.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -20,7 +20,7 @@ export class ProjectsService {
 
   async create(dto: CreateProjectDto, user: CurrentUserPayload) {
     const project = {
-      projectId: uuidv4(),
+      projectId: randomUUID(),
       ...dto,
       createdBy: user.sub,
       createdByName: user.name,
