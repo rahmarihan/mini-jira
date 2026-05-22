@@ -1,4 +1,5 @@
 // backend/src/tasks/tasks.service.ts
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import {
   Injectable,
   NotFoundException,
@@ -20,11 +21,36 @@ export class TasksService {
   private readonly tableName =
     process.env.DYNAMODB_TASKS_TABLE || 'Mini-jira-Tasks';
 
+  private readonly snsClient = new SNSClient({
+    region: process.env.AWS_REGION || 'eu-north-1',
+  });
+
   constructor(
     private readonly dynamo: DynamoService,
     private readonly auditLog: AuditLogService,
     private readonly metrics: CloudWatchMetricsService,
   ) {}
+
+  private async publishTaskAssigned(task: any, assignedBy: string) {
+    try {
+      await this.snsClient.send(
+        new PublishCommand({
+          TopicArn: 'arn:aws:sns:eu-north-1:507210367772:task-assignment-topic',
+          Message: JSON.stringify({
+            eventType: 'TASK_ASSIGNED',
+            taskId: task.taskId,
+            title: task.title,
+            teamId: task.teamId,
+            assignedBy: assignedBy,
+            assignee: task.assigneeName,
+          }),
+        }),
+      );
+    } catch (err) {
+      console.error('SNS publish failed:', err);
+      // don't throw — SNS failure shouldn't break task creation
+    }
+  }
 
   async create(dto: CreateTaskDto, user: CurrentUserPayload) {
     const task = {
@@ -38,6 +64,7 @@ export class TasksService {
     };
     await this.dynamo.putItem(this.tableName, task);
     void this.metrics.taskCreated(dto.teamId);
+    await this.publishTaskAssigned(task, user.name);
     return task;
   }
 
@@ -48,7 +75,6 @@ export class TasksService {
       if (teamId) return all.filter((t) => t.teamId === teamId);
       return all;
     }
-    // Employee — always filter by their own teamId
     return all.filter((task) => task.teamId === user.teamId);
   }
 
@@ -62,7 +88,7 @@ export class TasksService {
   }
 
   async update(taskId: string, dto: UpdateTaskDto, user: CurrentUserPayload) {
-    await this.findOne(taskId, user); // validates access
+    await this.findOne(taskId, user);
     const updates = { ...dto, updatedAt: new Date().toISOString() };
     return this.dynamo.updateItem(this.tableName, { taskId }, updates);
   }
@@ -115,7 +141,7 @@ export class TasksService {
   }
 
   async getAuditLog(taskId: string, user: CurrentUserPayload) {
-    await this.findOne(taskId, user); // validates access
+    await this.findOne(taskId, user);
     return this.auditLog.getLogsForTask(taskId);
   }
 }
