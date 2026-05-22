@@ -179,6 +179,7 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager, projects
               </p>
             )}
           </div>
+          
 
           {/* Project dropdown — optional */}
           {projects.length > 0 && (
