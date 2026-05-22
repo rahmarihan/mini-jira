@@ -5,14 +5,18 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { DynamoService } from '../dynamo/dynamo.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { FilesService } from '../files/files.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { CloudWatchMetricsService } from '../common/cloudwatch-metrics.service';
 import { isManager, STATUS_ORDER, TaskStatus } from '../common/types';
 
 @Injectable()
@@ -27,6 +31,9 @@ export class TasksService {
   constructor(
     private readonly dynamo: DynamoService,
     private readonly auditLog: AuditLogService,
+    private readonly metrics: CloudWatchMetricsService,
+    @Inject(forwardRef(() => FilesService))
+    private readonly filesService: FilesService,
   ) {}
 
   private async publishTaskAssigned(task: any, assignedBy: string) {
@@ -39,21 +46,27 @@ export class TasksService {
             taskId: task.taskId,
             title: task.title,
             teamId: task.teamId,
-            assignedBy: assignedBy,
+            assignedBy,
             assignee: task.assigneeName,
           }),
         }),
       );
     } catch (err) {
       console.error('SNS publish failed:', err);
-      // don't throw — SNS failure shouldn't break task creation
     }
   }
 
   async create(dto: CreateTaskDto, user: CurrentUserPayload) {
     console.log('DEBUG create dto:', JSON.stringify(dto)); // remove after confirming
+    if (!isManager(user)) {
+      throw new ForbiddenException('Only managers can create tasks');
+    }
+    if (dto.teamId !== 'Frontend' && dto.teamId !== 'Backend') {
+      throw new BadRequestException('teamId must be Frontend or Backend');
+    }
+
     const task = {
-      taskId: uuidv4(),
+      taskId: randomUUID(),
       ...dto,
       status: 'TODO' as TaskStatus,
       createdBy: user.sub,
@@ -62,6 +75,7 @@ export class TasksService {
       updatedAt: new Date().toISOString(),
     };
     await this.dynamo.putItem(this.tableName, task);
+    void this.metrics.taskCreated(dto.teamId);
     await this.publishTaskAssigned(task, user.name);
     return task;
   }
@@ -72,6 +86,10 @@ export class TasksService {
     if (isManager(user)) {
       if (teamId) return all.filter((t) => t.teamId === teamId);
       return all;
+    }
+    // Employees: server-side team isolation — ignore teamId query param
+    if (user.teamId === 'ALL') {
+      throw new ForbiddenException('Invalid employee team scope');
     }
     return all.filter((task) => task.teamId === user.teamId);
   }
@@ -120,6 +138,12 @@ export class TasksService {
       newStatus: dto.status,
     });
 
+    if (dto.status === 'DONE') {
+      const created = new Date(String(task.createdAt)).getTime();
+      const seconds = Math.round((Date.now() - created) / 1000);
+      void this.metrics.taskClosed(String(task.teamId), seconds);
+    }
+
     return updated;
   }
 
@@ -127,7 +151,8 @@ export class TasksService {
     if (!isManager(user)) {
       throw new ForbiddenException('Only managers can delete tasks');
     }
-    await this.findOne(taskId, user);
+    const task = await this.findOne(taskId, user);
+    await this.filesService.deleteTaskImages(task.imageKey, task.thumbnailKey);
     await this.dynamo.deleteItem(this.tableName, { taskId });
     return { message: 'Task deleted successfully' };
   }

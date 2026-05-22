@@ -1,0 +1,232 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "# Mini-Jira Operations Dashboard\n**Region:** eu-north-1 | **ASG:** mini-jira-asg | **Instances:** i-0cabde365d7a06081, i-0dbb8744f4376b3cb | [Open in Console](https://eu-north-1.console.aws.amazon.com/cloudwatch/home?region=eu-north-1#dashboards/dashboard/mini-jira-notifications-dashboard)"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 1,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "EC2 — CPU Utilization (%)",
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "eu-north-1",
+        "period": 300,
+        "stat": "Average",
+        "metrics": [
+          ["AWS/EC2", "CPUUtilization", "InstanceId", "i-0cabde365d7a06081", { "label": "AZ instance A" }],
+          ["AWS/EC2", "CPUUtilization", "InstanceId", "i-0dbb8744f4376b3cb", { "label": "AZ instance B" }],
+          [{ "expression": "SEARCH('{AWS/EC2,AutoScalingGroupName} MetricName=\"CPUUtilization\" AutoScalingGroupName=\"mini-jira-asg\"', 'Average', 300)", "label": "ASG (search)", "id": "e1" }]
+        ],
+        "yAxis": { "left": { "min": 0, "max": 100 } }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 1,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "EC2 — Status check failed",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 300,
+        "stat": "Maximum",
+        "metrics": [
+          ["AWS/EC2", "StatusCheckFailed", "InstanceId", "i-0cabde365d7a06081"],
+          ["AWS/EC2", "StatusCheckFailed", "InstanceId", "i-0dbb8744f4376b3cb"],
+          ["AWS/EC2", "StatusCheckFailed_Instance", "InstanceId", "i-0cabde365d7a06081"],
+          ["AWS/EC2", "StatusCheckFailed_Instance", "InstanceId", "i-0dbb8744f4376b3cb"]
+        ],
+        "yAxis": { "left": { "min": 0 } }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 7,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "EC2 — Network in / out (bytes)",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 300,
+        "stat": "Sum",
+        "metrics": [
+          ["AWS/EC2", "NetworkIn", "InstanceId", "i-0cabde365d7a06081", { "label": "In A" }],
+          ["AWS/EC2", "NetworkOut", "InstanceId", "i-0cabde365d7a06081", { "label": "Out A" }],
+          ["AWS/EC2", "NetworkIn", "InstanceId", "i-0dbb8744f4376b3cb", { "label": "In B" }],
+          ["AWS/EC2", "NetworkOut", "InstanceId", "i-0dbb8744f4376b3cb", { "label": "Out B" }]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 7,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "EC2 — Memory used % (CloudWatch agent)",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 300,
+        "stat": "Average",
+        "metrics": [
+          [{ "expression": "SEARCH('{MiniJira/EC2,host} MetricName=\"mem_used_percent\"', 'Average', 300)", "label": "mem_used_percent", "id": "m1" }]
+        ],
+        "yAxis": { "left": { "min": 0, "max": 100 } }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 13,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "ALB — Healthy hosts",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 300,
+        "stat": "Average",
+        "metrics": [
+          [{ "expression": "SEARCH('{AWS/ApplicationELB,LoadBalancer,TargetGroup} MetricName=\"HealthyHostCount\"', 'Average', 300)", "label": "HealthyHostCount", "id": "a1" }]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 13,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "ALB — Request count",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 300,
+        "stat": "Sum",
+        "metrics": [
+          [{ "expression": "SEARCH('{AWS/ApplicationELB,LoadBalancer} MetricName=\"RequestCount\"', 'Sum', 300)", "label": "RequestCount", "id": "a2" }]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 13,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "CloudFront — Requests",
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300,
+        "stat": "Sum",
+        "metrics": [
+          [{ "expression": "SEARCH('{AWS/CloudFront,DistributionId} MetricName=\"Requests\"', 'Sum', 300)", "label": "Requests", "id": "c1", "region": "us-east-1" }]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 19,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Mini-Jira — Tasks created / day",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 86400,
+        "stat": "Sum",
+        "metrics": [
+          ["MiniJira/Tasks", "TasksCreated", { "id": "m1", "visible": false }],
+          [{ "expression": "m1", "label": "TasksCreated", "id": "e1" }]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 19,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Mini-Jira — Tasks closed by team",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 3600,
+        "stat": "Sum",
+        "metrics": [
+          ["MiniJira/Tasks", "TasksClosed", "TeamId", "Frontend"],
+          ["MiniJira/Tasks", "TasksClosed", "TeamId", "Backend"]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 19,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Mini-Jira — Avg time-to-close (s)",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 3600,
+        "stat": "Average",
+        "metrics": [["MiniJira/Tasks", "TimeToCloseSeconds"]]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 25,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "SNS — Messages published",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 300,
+        "stat": "Sum",
+        "metrics": [
+          ["AWS/SNS", "NumberOfMessagesPublished", "TopicName", "task-assignment-topic"],
+          ["AWS/SNS", "NumberOfMessagesPublished", "TopicName", "daily-digest-topic"]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 25,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Mini-Jira — Overdue tasks",
+        "view": "timeSeries",
+        "region": "eu-north-1",
+        "period": 300,
+        "stat": "Maximum",
+        "metrics": [["MiniJira/Tasks", "OverdueTaskCount"]],
+        "annotations": {
+          "horizontal": [{ "label": "Alarm threshold", "value": 10 }]
+        }
+      }
+    }
+  ]
+}

@@ -3,30 +3,47 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthStore } from '../../store/auth.store';
 import { projectService } from '../../services/project.service';
+
 import type { Project } from '../../types/project';
+
 import { getErrorMessage } from '../../lib/error';
 
-const EMPTY_FORM = { name: '', description: '' };
+const EMPTY_FORM = {
+  name: '',
+  description: '',
+};
 
 export default function ProjectsPage() {
   const router = useRouter();
+
   const { user, isAuthenticated, fetchMe } = useAuth();
-  const hydrateFromStorage = useAuthStore((s) => s.hydrateFromStorage);
+
+  const hydrateFromStorage = useAuthStore(
+    (s) => s.hydrateFromStorage,
+  );
+
   const idToken = useAuthStore((s) => s.idToken);
+
   const isManager = user?.role === 'Manager';
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Create / edit modal state
+  // Modal state
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
+
+  const [editingProject, setEditingProject] =
+    useState<Project | null>(null);
+
   const [form, setForm] = useState(EMPTY_FORM);
+
   const [saving, setSaving] = useState(false);
+
   const [formError, setFormError] = useState('');
 
   useEffect(() => {
@@ -35,7 +52,10 @@ export default function ProjectsPage() {
   }, [fetchMe, hydrateFromStorage]);
 
   useEffect(() => {
-    if (!isAuthenticated && !localStorage.getItem('mini-jira.idToken')) {
+    if (
+      !isAuthenticated &&
+      !localStorage.getItem('mini-jira.idToken')
+    ) {
       router.push('/auth/login');
     }
   }, [isAuthenticated, router]);
@@ -54,23 +74,28 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     load();
-  }, [idToken]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idToken]);
 
   const openCreate = () => {
     setEditingProject(null);
+
     setForm(EMPTY_FORM);
+
     setFormError('');
+
     setModalOpen(true);
   };
 
-  const openEdit = (p: Project) => {
-    setEditingProject(p);
+  const openEdit = (project: Project) => {
+    setEditingProject(project);
+
     setForm({
-      name: p.name,
-      description: p.description ?? '',
+      name: project.name,
+      description: project.description ?? '',
     });
 
     setFormError('');
+
     setModalOpen(true);
   };
 
@@ -81,41 +106,56 @@ export default function ProjectsPage() {
     }
 
     setSaving(true);
+
     setFormError('');
 
     try {
       if (editingProject) {
-        await projectService.update(editingProject.projectId, form);
+        await projectService.update(
+          editingProject.projectId,
+          form,
+        );
       } else {
         await projectService.create(form);
       }
 
       setModalOpen(false);
+
       load();
     } catch (err) {
-      setFormError(getErrorMessage(err, 'Failed to save project'));
+      setFormError(
+        getErrorMessage(err, 'Failed to save project'),
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (projectId: string) => {
-    if (!confirm('Delete this project? This cannot be undone.')) return;
+    if (
+      !confirm(
+        'Delete this project? This cannot be undone.',
+      )
+    ) {
+      return;
+    }
 
     try {
       await projectService.delete(projectId);
 
       setProjects((prev) =>
-        prev.filter((p) => p.projectId !== projectId)
+        prev.filter((p) => p.projectId !== projectId),
       );
     } catch (err) {
-      alert(getErrorMessage(err, 'Failed to delete project'));
+      alert(
+        getErrorMessage(err, 'Failed to delete project'),
+      );
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Nav */}
+      {/* NAVBAR */}
       <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <span className="text-lg font-bold text-gray-900">
           Mini-Jira
@@ -217,36 +257,39 @@ export default function ProjectsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((p) => (
+            {projects.map((project) => (
               <div
-                key={p.projectId}
+                key={project.projectId}
                 className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-2 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold text-gray-800 text-sm leading-tight">
-                    {p.name}
+                    {project.name}
                   </h3>
                 </div>
 
                 <p className="text-xs text-gray-400 line-clamp-3 flex-1">
-                  {p.description || 'No description'}
+                  {project.description || 'No description'}
                 </p>
 
                 <p className="text-xs text-gray-300">
-                  Created by {p.createdByName ?? 'unknown'}
+                  Created by{' '}
+                  {project.createdByName ?? 'unknown'}
                 </p>
 
                 {isManager && (
                   <div className="flex gap-2 pt-1">
                     <button
-                      onClick={() => openEdit(p)}
+                      onClick={() => openEdit(project)}
                       className="flex-1 text-xs border border-gray-200 rounded-md py-1.5 text-gray-600 hover:bg-gray-50"
                     >
                       Edit
                     </button>
 
                     <button
-                      onClick={() => handleDelete(p.projectId)}
+                      onClick={() =>
+                        handleDelete(project.projectId)
+                      }
                       className="flex-1 text-xs border border-red-100 rounded-md py-1.5 text-red-500 hover:bg-red-50"
                     >
                       Delete
@@ -259,12 +302,14 @@ export default function ProjectsPage() {
         )}
       </main>
 
-      {/* Create / Edit Modal */}
+      {/* MODAL */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-gray-800 mb-4">
-              {editingProject ? 'Edit Project' : 'New Project'}
+              {editingProject
+                ? 'Edit Project'
+                : 'New Project'}
             </h2>
 
             {formError && (
@@ -287,7 +332,6 @@ export default function ProjectsPage() {
                       name: e.target.value,
                     }))
                   }
-                  placeholder="e.g. Sprint 3, Q3 Deliverables"
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -305,7 +349,6 @@ export default function ProjectsPage() {
                       description: e.target.value,
                     }))
                   }
-                  placeholder="What is this project about?"
                   rows={3}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />

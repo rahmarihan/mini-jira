@@ -64,6 +64,7 @@ export const authService = {
     Object.values(TOKEN_KEYS).forEach((key) => localStorage.removeItem(key));
     localStorage.removeItem('token');
     document.cookie = 'token=; Max-Age=0; path=/';
+    document.cookie = 'role=; Max-Age=0; path=/';
   },
 
   persistAuth(data: AuthResponse) {
@@ -79,6 +80,7 @@ export const authService = {
       localStorage.setItem(TOKEN_KEYS.refreshToken, data.refreshToken);
     }
     localStorage.setItem(TOKEN_KEYS.user, JSON.stringify(data.user));
+    document.cookie = `role=${data.user.role}; path=/; SameSite=Lax`;
   },
 
   hydrate() {

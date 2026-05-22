@@ -1,0 +1,65 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SSMParameters",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
+      ],
+      "Resource": "arn:aws:ssm:eu-north-1:507210367772:parameter/mini-jira/prod/*"
+    },
+    {
+      "Sid": "DynamoDBTables",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:BatchGetItem"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:eu-north-1:507210367772:table/Mini-jira-Users",
+        "arn:aws:dynamodb:eu-north-1:507210367772:table/Mini-jira-Teams",
+        "arn:aws:dynamodb:eu-north-1:507210367772:table/Mini-jira-Tasks",
+        "arn:aws:dynamodb:eu-north-1:507210367772:table/Mini-jira-Projects",
+        "arn:aws:dynamodb:eu-north-1:507210367772:table/Mini-jira-AuditLog",
+        "arn:aws:dynamodb:eu-north-1:507210367772:table/Mini-jira-Comments",
+        "arn:aws:dynamodb:eu-north-1:507210367772:table/ActivityLogs",
+        "arn:aws:dynamodb:eu-north-1:507210367772:table/Mini-jira-*/index/*"
+      ]
+    },
+    {
+      "Sid": "S3TaskImages",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::mini-jira-original-images-giu/*",
+        "arn:aws:s3:::mini-jira-resized-images-giu/*"
+      ]
+    },
+    {
+      "Sid": "CognitoAuth",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:AdminGetUser",
+        "cognito-idp:ListUsers",
+        "cognito-idp:InitiateAuth",
+        "cognito-idp:SignUp"
+      ],
+      "Resource": "arn:aws:cognito-idp:eu-north-1:507210367772:userpool/eu-north-1_7kSYxgEr6"
+    },
+    {
+      "Sid": "CloudWatchMetrics",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:PutMetricData"],
+      "Resource": "*"
+    }
+  ]
+}

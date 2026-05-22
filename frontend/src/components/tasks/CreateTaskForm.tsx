@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { getErrorMessage } from '../../lib/error';
 import { Task, Priority } from '../../types/task';
 import type { Project } from '../../types/project';
+import { DEMO_ASSIGNEE_PRESETS } from '../../config/demo-users';
+
 import { authService, UserOption } from '../../services/auth.service';
 
 interface Props {
@@ -69,7 +71,7 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager, projects
 
   const handleSubmit = async () => {
     if (!form.title || !form.deadline || !form.assigneeId || !form.teamId) {
-      setError('Please fill in all required fields (title, deadline, assignee)');
+      setError('Please fill in all required fields');
       return;
     }
     setLoading(true);
