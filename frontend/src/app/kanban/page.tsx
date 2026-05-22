@@ -52,7 +52,13 @@ export default function KanbanPage() {
 
   useEffect(() => {
     if (!idToken) return;
-    projectService.getAll().then(setProjects).catch(() => {});
+    projectService
+      .getAll()
+      .then((data) => {
+        console.log('Projects loaded:', data); // remove after confirming
+        setProjects(data);
+      })
+      .catch((err) => console.error('Projects fetch error:', err));
   }, [idToken]);
 
   const handleStatusChange = async (taskId: string, status: TaskStatus) => {
@@ -103,14 +109,16 @@ export default function KanbanPage() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            {/* Project filter dropdown */}
-            {projects.length > 0 && (
+            {/* Project filter dropdown — always visible to manager */}
+            {isManager && (
               <select
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
-                <option value="">All Projects</option>
+                <option value="">
+                  {projects.length === 0 ? 'No projects yet' : 'All Projects'}
+                </option>
                 {projects.map((p) => (
                   <option key={p.projectId} value={p.projectId}>{p.name}</option>
                 ))}

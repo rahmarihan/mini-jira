@@ -11,6 +11,9 @@ import { useAuthStore } from '@/src/store/auth.store';
 import { useTasks } from '@/src/hooks/useTasks';
 import { useTaskStore } from '@/src/store/task.store';
 
+import { projectService } from '@/src/services/project.service';
+import type { Project } from '@/src/types/project';
+
 import { StatsCards } from '@/src/components/dashboard/StatsCards';
 import { DashboardSkeletonLoader } from '@/src/components/dashboard/SkeletonLoader';
 import CreateTaskForm from '@/src/components/tasks/CreateTaskForm';
@@ -41,6 +44,7 @@ const MOCK_TEAMS = [
   { teamId: 'Backend', name: 'Backend' },
 ];
 
+
 function resolveManagerTeamFilter(teamId?: TeamId): string | undefined {
   if (!teamId || teamId === 'ALL') return undefined;
   return teamId;
@@ -70,6 +74,9 @@ export default function DashboardPage() {
   const isManager = user?.role === 'Manager';
 
   const [managerTeamFilter, setManagerTeamFilter] = useState('');
+
+  const [projects, setProjects] = useState<Project[]>([]);
+
 
   const taskTeamScope = isManager
     ? managerTeamFilter || resolveManagerTeamFilter(user?.teamId)
@@ -103,6 +110,11 @@ export default function DashboardPage() {
       });
     }
   }, [error]);
+
+  useEffect(() => {
+    if (!idToken) return;
+    projectService.getAll().then(setProjects).catch(() => {});
+  }, [idToken]);
 
   const metrics = useMemo(
     () => computeDashboardMetrics(tasks),
@@ -293,6 +305,7 @@ export default function DashboardPage() {
           onSubmit={createTask}
           onCancel={closeCreateForm}
           isManager={isManager}
+          projects={projects}
         />
       )}
     </div>
