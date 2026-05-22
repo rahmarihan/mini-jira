@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://mini-jira-alb-74822711.eu-north-1.elb.amazonaws.com:3001/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
