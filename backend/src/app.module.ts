@@ -13,6 +13,7 @@ import { CommentsModule } from './comments/comments.module';
 import { FilesModule } from './files/files.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
+import { UsersModule } from './users/users.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -32,6 +33,7 @@ import { AppService } from './app.service';
     FilesModule,
     NotificationsModule,
     AuditLogModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

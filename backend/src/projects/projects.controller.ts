@@ -32,16 +32,17 @@ export class ProjectsController {
   }
 
   @Get()
-  findAll() {
-    return this.projectsService.findAll();
+  findAll(@CurrentUser() user: CurrentUserPayload) {
+    return this.projectsService.findAll(user);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.projectsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.projectsService.findOne(id, user);
   }
 
   @Patch(':id')
+  @Roles('Manager')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateProjectDto,

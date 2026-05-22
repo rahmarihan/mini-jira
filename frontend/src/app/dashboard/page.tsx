@@ -11,9 +11,6 @@ import { useAuthStore } from '@/src/store/auth.store';
 import { useTasks } from '@/src/hooks/useTasks';
 import { useTaskStore } from '@/src/store/task.store';
 
-import { projectService } from '@/src/services/project.service';
-import type { Project } from '@/src/types/project';
-
 import { StatsCards } from '@/src/components/dashboard/StatsCards';
 import { DashboardSkeletonLoader } from '@/src/components/dashboard/SkeletonLoader';
 import CreateTaskForm from '@/src/components/tasks/CreateTaskForm';
@@ -36,21 +33,15 @@ import {
 } from '@/src/lib/dashboard';
 
 import { formatDate } from '@/lib/utils';
-
 import type { TeamId } from '@/src/types/user';
-
-const MOCK_TEAMS = [
-  { teamId: 'Frontend', name: 'Frontend' },
-  { teamId: 'Backend', name: 'Backend' },
-];
-
+import { userService, type Team } from '@/src/services/user.service';
 
 function resolveManagerTeamFilter(teamId?: TeamId): string | undefined {
   if (!teamId || teamId === 'ALL') return undefined;
   return teamId;
 }
 
-function dashboardSubtitle(user: { role: string; teamId?: TeamId }) {
+function dashboardSubtitle(user: { role?: string; teamId?: TeamId }) {
   if (user.role === 'Manager') {
     return user.teamId === 'ALL'
       ? 'Company-wide overview (all teams)'
@@ -64,19 +55,15 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const { user, isAuthenticated, fetchMe } = useAuth();
-
   const hydrateFromStorage = useAuthStore(
     (state) => state.hydrateFromStorage,
   );
-
   const idToken = useAuthStore((state) => state.idToken);
 
   const isManager = user?.role === 'Manager';
 
   const [managerTeamFilter, setManagerTeamFilter] = useState('');
-
-  const [projects, setProjects] = useState<Project[]>([]);
-
+  const [teams, setTeams] = useState<Team[]>([]);
 
   const taskTeamScope = isManager
     ? managerTeamFilter || resolveManagerTeamFilter(user?.teamId)
@@ -86,7 +73,7 @@ export default function DashboardPage() {
 
   const { tasks, loading, error, createTask } = useTasks(
     taskTeamScope,
-    Boolean(idToken) && Boolean(user),
+    Boolean(idToken) && Boolean(user?.role && user?.teamId),
   );
 
   const { isCreateFormOpen, openCreateForm, closeCreateForm } =
@@ -112,9 +99,21 @@ export default function DashboardPage() {
   }, [error]);
 
   useEffect(() => {
-    if (!idToken) return;
-    projectService.getAll().then(setProjects).catch(() => {});
-  }, [idToken]);
+    if (!isManager) return;
+
+    async function loadTeams() {
+      try {
+        setTeams(await userService.getTeams());
+      } catch (err: unknown) {
+        toast.error('Failed to load teams', {
+          description:
+            err instanceof Error ? err.message : 'Team filter is unavailable',
+        });
+      }
+    }
+
+    void loadTeams();
+  }, [isManager]);
 
   const metrics = useMemo(
     () => computeDashboardMetrics(tasks),
@@ -140,6 +139,20 @@ export default function DashboardPage() {
 
   if (!user) {
     return <DashboardSkeletonLoader />;
+  }
+
+  if (!user.role || !user.teamId) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Your account is pending Manager assignment.</CardTitle>
+          <CardDescription>
+            A Manager needs to assign your role and team before workspace data is
+            available.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   if (loading) {
@@ -188,7 +201,7 @@ export default function DashboardPage() {
 
       {isManager && (
         <ManagerTeamFilter
-          teams={MOCK_TEAMS}
+          teams={teams}
           selectedTeamId={managerTeamFilter}
           onChange={setManagerTeamFilter}
         />
@@ -267,7 +280,7 @@ export default function DashboardPage() {
                   : 0;
 
                 return (
-                  <div key={`${member.name}-${index}`} className="space-y-2">
+                  <div key={member.assigneeId} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">
                         {member.name}
@@ -305,7 +318,6 @@ export default function DashboardPage() {
           onSubmit={createTask}
           onCancel={closeCreateForm}
           isManager={isManager}
-          projects={projects}
         />
       )}
     </div>

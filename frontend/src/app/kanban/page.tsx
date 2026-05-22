@@ -1,43 +1,48 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
 import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthStore } from '../../store/auth.store';
 import { useTaskStore } from '../../store/task.store';
+
 import { projectService } from '../../services/project.service';
+import { userService, type Team } from '../../services/user.service';
+
 import KanbanBoard from '../../components/tasks/KanbanBoard';
 import CreateTaskForm from '../../components/tasks/CreateTaskForm';
 import ManagerTeamFilter from '../../components/tasks/ManagerTeamFilter';
+
 import { TaskStatus } from '../../types/task';
 import type { Project } from '../../types/project';
 import { getErrorMessage } from '../../lib/error';
 
 export default function KanbanPage() {
   const router = useRouter();
+
   const { user, isAuthenticated, fetchMe } = useAuth();
-  const hydrateFromStorage = useAuthStore((s) => s.hydrateFromStorage);
-  const idToken = useAuthStore((s) => s.idToken);
-  const logout = useAuthStore((s) => s.logout);
 
-  const [selectedTeamId, setSelectedTeamId] = useState('');
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
+  const idToken = useAuthStore((state) => state.idToken);
+  const logout = useAuthStore((state) => state.logout);
 
-  const { tasks, loading, error, createTask, updateStatus, deleteTask } = useTasks(
-    selectedTeamId || undefined,
-    Boolean(idToken),
-  );
-
-  const { isCreateFormOpen, openCreateForm, closeCreateForm } = useTaskStore();
   const isManager = user?.role === 'Manager';
 
-  // Derive teams from actual task data rather than a hardcoded mock list
-  const teams = Array.from(new Set(tasks.map((t) => t.teamId)))
-    .filter(Boolean)
-    .map((id) => ({ teamId: id, name: id }));
+  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  const { tasks, loading, error, createTask, updateStatus, deleteTask } =
+    useTasks(
+      selectedTeamId || undefined,
+      Boolean(idToken) && Boolean(user?.role && user?.teamId),
+    );
+
+  const { isCreateFormOpen, openCreateForm, closeCreateForm } = useTaskStore();
 
   useEffect(() => {
     hydrateFromStorage();
@@ -51,15 +56,33 @@ export default function KanbanPage() {
   }, [isAuthenticated, router]);
 
   useEffect(() => {
-    if (!idToken) return;
-    projectService
-      .getAll()
-      .then((data) => {
-        console.log('Projects loaded:', data); // remove after confirming
-        setProjects(data);
-      })
-      .catch((err) => console.error('Projects fetch error:', err));
-  }, [idToken]);
+    if (!isManager || !idToken) return;
+
+    async function loadTeams() {
+      try {
+        setTeams(await userService.getTeams());
+      } catch {
+        setTeams([]);
+      }
+    }
+
+    void loadTeams();
+  }, [isManager, idToken]);
+
+  useEffect(() => {
+    if (!isManager || !idToken) return;
+
+    async function loadProjects() {
+      try {
+        setProjects(await projectService.getAll());
+      } catch (err: unknown) {
+        console.error('Projects fetch error:', err);
+        setProjects([]);
+      }
+    }
+
+    void loadProjects();
+  }, [isManager, idToken]);
 
   const handleStatusChange = async (taskId: string, status: TaskStatus) => {
     try {
@@ -69,64 +92,113 @@ export default function KanbanPage() {
     }
   };
 
-  // Filter tasks by selected project if one is chosen
-  const displayedTasks = selectedProjectId
-    ? tasks.filter((t) => t.projectId === selectedProjectId)
-    : tasks;
+  const displayedTasks = useMemo(() => {
+    if (!selectedProjectId) return tasks;
+    return tasks.filter((task) => task.projectId === selectedProjectId);
+  }, [tasks, selectedProjectId]);
 
   const handleLogout = () => {
     logout();
     router.push('/auth/login');
   };
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <p className="text-sm text-gray-500">Loading Kanban board...</p>
+      </div>
+    );
+  }
+
+  if (!user.role || !user.teamId) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <h1 className="text-xl font-semibold text-gray-900">
+            Your account is pending Manager assignment.
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">
+            A Manager needs to assign your role and team before Kanban data is
+            available.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Nav */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <nav className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
         <span className="text-lg font-bold text-gray-900">Mini-Jira</span>
+
         <div className="flex items-center gap-6 text-sm">
-          <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
-          <Link href="/kanban" className="font-semibold text-blue-600">Kanban Board</Link>
-          <Link href="/projects" className="text-gray-600 hover:text-gray-900">Projects</Link>
+          <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
+            Dashboard
+          </Link>
+
+          <Link href="/kanban" className="font-semibold text-blue-600">
+            Kanban Board
+          </Link>
+
+          <Link href="/projects" className="text-gray-600 hover:text-gray-900">
+            Projects
+          </Link>
+
           <span className="text-gray-400">|</span>
-          <span className="text-gray-600">{user?.name}</span>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isManager ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}`}>
-            {user?.role}
+
+          <span className="text-gray-600">{user.name}</span>
+
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              isManager
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-sky-100 text-sky-700'
+            }`}
+          >
+            {user.role}
           </span>
-          <button onClick={handleLogout} className="text-gray-400 hover:text-gray-600 text-xs">
+
+          <button
+            onClick={handleLogout}
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
             Logout
           </button>
         </div>
       </nav>
 
       <div className="px-6 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Kanban Board</h1>
+
             {!isManager && (
-              <p className="text-sm text-gray-500 mt-0.5">Team: {user?.teamId}</p>
+              <p className="mt-0.5 text-sm text-gray-500">
+                Team: {user.teamId}
+              </p>
             )}
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap justify-end">
-            {/* Project filter dropdown — always visible to manager */}
+          <div className="flex flex-wrap items-center justify-end gap-3">
             {isManager && (
               <select
                 value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                onChange={(event) => setSelectedProjectId(event.target.value)}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 <option value="">
                   {projects.length === 0 ? 'No projects yet' : 'All Projects'}
                 </option>
-                {projects.map((p) => (
-                  <option key={p.projectId} value={p.projectId}>{p.name}</option>
+
+                {projects.map((project) => (
+                  <option key={project.projectId} value={project.projectId}>
+                    {project.name}
+                  </option>
                 ))}
               </select>
             )}
 
-            {/* Team filter — manager only, derived from real task data */}
-            {isManager && teams.length > 0 && (
+            {isManager && (
               <ManagerTeamFilter
                 teams={teams}
                 selectedTeamId={selectedTeamId}
@@ -137,7 +209,7 @@ export default function KanbanPage() {
             {isManager && (
               <button
                 onClick={openCreateForm}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700"
               >
                 + New Task
               </button>
@@ -145,7 +217,7 @@ export default function KanbanPage() {
           </div>
         </div>
 
-        {error && <p className="text-red-500 mb-4 text-sm">{error}</p>}
+        {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
         <KanbanBoard
           tasks={displayedTasks}
@@ -154,16 +226,15 @@ export default function KanbanPage() {
           loading={loading}
           isManager={isManager}
         />
-      </div>
 
-      {isCreateFormOpen && (
-        <CreateTaskForm
-          onSubmit={createTask}
-          onCancel={closeCreateForm}
-          isManager={isManager}
-          projects={projects}
-        />
-      )}
+        {isCreateFormOpen && isManager && (
+          <CreateTaskForm
+            onSubmit={createTask}
+            onCancel={closeCreateForm}
+            isManager={isManager}
+          />
+        )}
+      </div>
     </div>
   );
 }

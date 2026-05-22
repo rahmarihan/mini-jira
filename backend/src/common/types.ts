@@ -19,16 +19,16 @@ export const STATUS_ORDER: TaskStatus[] = [
 ];
 
 export type UserRole = 'Manager' | 'Employee';
-export type TeamId = 'ALL' | 'Frontend' | 'Backend';
+export type TeamId = string;
 export type EmployeeTeamId = Exclude<TeamId, 'ALL'>;
 
 export interface AuthUser {
   userId: string;
   sub: string;
   email: string;
-  name: string;
-  role: UserRole;
-  teamId: TeamId;
+  name?: string;
+  role?: UserRole;
+  teamId?: TeamId;
 }
 
 export const isManager = (user: Pick<AuthUser, 'role'>) =>

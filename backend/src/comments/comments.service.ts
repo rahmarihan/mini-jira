@@ -7,14 +7,19 @@ import type { CurrentUserPayload } from '../common/decorators/current-user.decor
 
 @Injectable()
 export class CommentsService {
-  private tableName = process.env.DYNAMODB_COMMENTS_TABLE || 'Mini-jira-Comments';
+  private tableName =
+    process.env.DYNAMODB_COMMENTS_TABLE || 'Mini-jira-Comments';
 
   constructor(
     private readonly dynamoService: DynamoService,
     private readonly tasksService: TasksService,
   ) {}
 
-  async create(taskId: string, dto: CreateCommentDto, user: CurrentUserPayload) {
+  async create(
+    taskId: string,
+    dto: CreateCommentDto,
+    user: CurrentUserPayload,
+  ) {
     await this.tasksService.findOne(taskId, user);
 
     const comment = {

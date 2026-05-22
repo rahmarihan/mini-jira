@@ -3,8 +3,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { AuthService } from './auth.service';
 import { CognitoAuthGuard } from './cognito-auth.guard';
+import { ConfirmRegistrationDto } from './dto/confirm-registration.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResendConfirmationDto } from './dto/resend-confirmation.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -24,6 +26,16 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('register/confirm')
+  confirmRegistration(@Body() dto: ConfirmRegistrationDto) {
+    return this.authService.confirmRegistration(dto);
+  }
+
+  @Post('register/resend-code')
+  resendConfirmationCode(@Body() dto: ResendConfirmationDto) {
+    return this.authService.resendConfirmationCode(dto.email);
   }
 
   @Get('me')

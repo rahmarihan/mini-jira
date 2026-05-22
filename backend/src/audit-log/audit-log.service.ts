@@ -11,8 +11,8 @@ export class AuditLogService {
 
   async logStatusChange(params: {
     taskId: string;
-    changedBy: string;      // userId from JWT
-    changedByName: string;  // display name
+    changedBy: string; // userId from JWT
+    changedByName: string; // display name
     oldStatus: string;
     newStatus: string;
   }) {

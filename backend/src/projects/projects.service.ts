@@ -23,7 +23,7 @@ export class ProjectsService {
       projectId: randomUUID(),
       ...dto,
       createdBy: user.sub,
-      createdByName: user.name,
+      createdByName: user.name || user.email,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -31,13 +31,30 @@ export class ProjectsService {
     return project;
   }
 
-  async findAll() {
-    return this.dynamo.scan(this.tableName);
+  async findAll(user: CurrentUserPayload) {
+    const projects = await this.dynamo.scan(this.tableName);
+    if (isManager(user)) return projects;
+    if (!user.teamId) {
+      throw new ForbiddenException(
+        'Your account is pending Manager team assignment',
+      );
+    }
+    return projects.filter(
+      (project) => !project.teamId || project.teamId === user.teamId,
+    );
   }
 
-  async findOne(projectId: string) {
+  async findOne(projectId: string, user?: CurrentUserPayload) {
     const project = await this.dynamo.getItem(this.tableName, { projectId });
     if (!project) throw new NotFoundException('Project not found');
+    if (
+      user &&
+      !isManager(user) &&
+      project.teamId &&
+      project.teamId !== user.teamId
+    ) {
+      throw new ForbiddenException('You cannot access this project');
+    }
     return project;
   }
 
@@ -48,7 +65,7 @@ export class ProjectsService {
   ) {
     if (!isManager(user))
       throw new ForbiddenException('Only managers can update projects');
-    await this.findOne(projectId);
+    await this.findOne(projectId, user);
     const updates = { ...dto, updatedAt: new Date().toISOString() };
     return this.dynamo.updateItem(this.tableName, { projectId }, updates);
   }
@@ -56,7 +73,7 @@ export class ProjectsService {
   async remove(projectId: string, user: CurrentUserPayload) {
     if (!isManager(user))
       throw new ForbiddenException('Only managers can delete projects');
-    await this.findOne(projectId);
+    await this.findOne(projectId, user);
     await this.dynamo.deleteItem(this.tableName, { projectId });
     return { message: 'Project deleted successfully' };
   }

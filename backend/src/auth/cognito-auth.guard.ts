@@ -57,8 +57,8 @@ export class CognitoAuthGuard implements CanActivate {
       const payload = await this.verifyIdTokenFirst(token);
       request.user = await this.toAuthUser(payload);
       return true;
-    } catch {
-      throw new UnauthorizedException('Missing, invalid, or expired token');
+    } catch (error: unknown) {
+      throw this.toUnauthorizedException(error);
     }
   }
 
@@ -134,18 +134,35 @@ export class CognitoAuthGuard implements CanActivate {
     };
   }
 
-  private toRole(value?: string): UserRole {
-    if (!value) return 'Employee';
+  private toRole(value?: string): UserRole | undefined {
+    if (!value) return undefined;
     if (value === 'Manager' || value === 'Employee') return value;
     if (value.toLowerCase() === 'manager') return 'Manager';
     if (value.toLowerCase() === 'employee') return 'Employee';
     throw new UnauthorizedException('Token has an invalid role');
   }
 
-  private toTeamId(value?: string): TeamId {
-    if (value === 'ALL' || value === 'Frontend' || value === 'Backend') {
-      return value;
+  private toTeamId(value?: string): TeamId | undefined {
+    return value || undefined;
+  }
+
+  private toUnauthorizedException(error: unknown) {
+    if (error instanceof UnauthorizedException) return error;
+    const name = error instanceof Error ? error.name : '';
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (name.toLowerCase().includes('expired') || message.includes('expired')) {
+      return new UnauthorizedException('Token has expired');
     }
-    throw new UnauthorizedException('Token has an invalid teamId');
+    if (message.toLowerCase().includes('issuer')) {
+      return new UnauthorizedException('Token is from the wrong user pool');
+    }
+    if (
+      message.toLowerCase().includes('client') ||
+      message.toLowerCase().includes('audience')
+    ) {
+      return new UnauthorizedException('Token is from the wrong app client');
+    }
+    return new UnauthorizedException('Invalid token signature or claims');
   }
 }

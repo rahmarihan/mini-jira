@@ -61,8 +61,8 @@ export class TasksService {
     if (!isManager(user)) {
       throw new ForbiddenException('Only managers can create tasks');
     }
-    if (dto.teamId !== 'Frontend' && dto.teamId !== 'Backend') {
-      throw new BadRequestException('teamId must be Frontend or Backend');
+    if (!dto.teamId?.trim()) {
+      throw new BadRequestException('teamId is required');
     }
 
     const task = {
@@ -70,13 +70,13 @@ export class TasksService {
       ...dto,
       status: 'TODO' as TaskStatus,
       createdBy: user.sub,
-      createdByName: user.name,
+      createdByName: user.name || user.email,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     await this.dynamo.putItem(this.tableName, task);
     void this.metrics.taskCreated(dto.teamId);
-    await this.publishTaskAssigned(task, user.name);
+    await this.publishTaskAssigned(task, user.name || user.email);
     return this.withImageViewUrls(task);
   }
 
@@ -91,6 +91,14 @@ export class TasksService {
     } else {
       // Employees: server-side team isolation — ignore teamId query param
       tasks = all.filter((task) => task.teamId === user.teamId);
+      if (teamId) return all.filter((t) => t.teamId === teamId);
+      return all;
+    }
+    // Employees: server-side team isolation — ignore teamId query param
+    if (!user.teamId || user.teamId === 'ALL') {
+      throw new ForbiddenException(
+        'Your account is pending Manager team assignment',
+      );
     }
 
     return Promise.all(tasks.map((task) => this.withImageViewUrls(task)));
@@ -99,7 +107,7 @@ export class TasksService {
   async findOne(taskId: string, user: CurrentUserPayload) {
     const task = await this.dynamo.getItem(this.tableName, { taskId });
     if (!task) throw new NotFoundException('Task not found');
-    if (!isManager(user) && task.teamId !== user.teamId) {
+    if (!isManager(user) && (!user.teamId || task.teamId !== user.teamId)) {
       throw new ForbiddenException('You cannot access this task');
     }
     return this.withImageViewUrls(task);
@@ -107,6 +115,9 @@ export class TasksService {
 
   async update(taskId: string, dto: UpdateTaskDto, user: CurrentUserPayload) {
     await this.findOne(taskId, user);
+    if (!isManager(user) && (dto.assigneeId || dto.assigneeName)) {
+      throw new ForbiddenException('Only managers can assign tasks');
+    }
     const updates = { ...dto, updatedAt: new Date().toISOString() };
     const updated = await this.dynamo.updateItem(
       this.tableName,
@@ -140,7 +151,7 @@ export class TasksService {
     await this.auditLog.logStatusChange({
       taskId,
       changedBy: user.sub,
-      changedByName: user.name,
+      changedByName: user.name || user.email,
       oldStatus: String(task.status),
       newStatus: dto.status,
     });
