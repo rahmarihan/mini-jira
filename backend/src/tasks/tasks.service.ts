@@ -77,21 +77,23 @@ export class TasksService {
     await this.dynamo.putItem(this.tableName, task);
     void this.metrics.taskCreated(dto.teamId);
     await this.publishTaskAssigned(task, user.name);
-    return task;
+    return this.withImageViewUrls(task);
   }
 
   async findAll(user: CurrentUserPayload, teamId?: string) {
     const all = await this.dynamo.scan(this.tableName);
+    let tasks: Record<string, any>[];
 
     if (isManager(user)) {
-      if (teamId) return all.filter((t) => t.teamId === teamId);
-      return all;
-    }
-    // Employees: server-side team isolation — ignore teamId query param
-    if (user.teamId === 'ALL') {
+      tasks = teamId ? all.filter((t) => t.teamId === teamId) : all;
+    } else if (user.teamId === 'ALL') {
       throw new ForbiddenException('Invalid employee team scope');
+    } else {
+      // Employees: server-side team isolation — ignore teamId query param
+      tasks = all.filter((task) => task.teamId === user.teamId);
     }
-    return all.filter((task) => task.teamId === user.teamId);
+
+    return Promise.all(tasks.map((task) => this.withImageViewUrls(task)));
   }
 
   async findOne(taskId: string, user: CurrentUserPayload) {
@@ -100,13 +102,18 @@ export class TasksService {
     if (!isManager(user) && task.teamId !== user.teamId) {
       throw new ForbiddenException('You cannot access this task');
     }
-    return task;
+    return this.withImageViewUrls(task);
   }
 
   async update(taskId: string, dto: UpdateTaskDto, user: CurrentUserPayload) {
     await this.findOne(taskId, user);
     const updates = { ...dto, updatedAt: new Date().toISOString() };
-    return this.dynamo.updateItem(this.tableName, { taskId }, updates);
+    const updated = await this.dynamo.updateItem(
+      this.tableName,
+      { taskId },
+      updates,
+    );
+    return this.withImageViewUrls(updated);
   }
 
   async updateStatus(
@@ -144,7 +151,7 @@ export class TasksService {
       void this.metrics.taskClosed(String(task.teamId), seconds);
     }
 
-    return updated;
+    return this.withImageViewUrls(updated);
   }
 
   async remove(taskId: string, user: CurrentUserPayload) {
@@ -160,5 +167,20 @@ export class TasksService {
   async getAuditLog(taskId: string, user: CurrentUserPayload) {
     await this.findOne(taskId, user);
     return this.auditLog.getLogsForTask(taskId);
+  }
+
+  private async withImageViewUrls(
+    task: Record<string, any>,
+  ): Promise<Record<string, any>> {
+    const [thumbnailViewUrl, imageViewUrl] = await Promise.all([
+      this.filesService.createThumbnailViewUrl(task.thumbnailKey),
+      this.filesService.createImageViewUrl(task.imageKey),
+    ]);
+
+    return {
+      ...task,
+      ...(thumbnailViewUrl ? { thumbnailViewUrl } : {}),
+      ...(imageViewUrl ? { imageViewUrl } : {}),
+    };
   }
 }

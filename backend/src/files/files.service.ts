@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -94,6 +95,32 @@ export class FilesService {
         }),
       );
     }
+  }
+
+  async createThumbnailViewUrl(thumbnailKey?: string) {
+    if (!thumbnailKey) return undefined;
+
+    return getSignedUrl(
+      this.s3,
+      new GetObjectCommand({
+        Bucket: this.resizedBucket,
+        Key: thumbnailKey,
+      }),
+      { expiresIn: 300 },
+    );
+  }
+
+  async createImageViewUrl(imageKey?: string) {
+    if (!imageKey) return undefined;
+
+    return getSignedUrl(
+      this.s3,
+      new GetObjectCommand({
+        Bucket: this.originalsBucket,
+        Key: imageKey,
+      }),
+      { expiresIn: 300 },
+    );
   }
 
   private publicS3Url(bucket: string, key: string) {

@@ -67,13 +67,23 @@ export default function TaskModal({ task, onClose }: Props) {
         </div>
 
         <div className="p-6 space-y-4">
-          {currentTask.thumbnailUrl && (
-            <img src={currentTask.thumbnailUrl} alt="Task thumbnail" style={{ maxWidth: '200px', borderRadius: '8px' }} />
-          )}
-          {!currentTask.thumbnailUrl && currentTask.imageUrl && (
-            <img src={currentTask.imageUrl} alt="attachment" className="w-full h-48 object-cover rounded-xl" />
-          )}
-          {currentTask.taskId && <ImageUpload taskId={currentTask.taskId} />}
+         {(currentTask.thumbnailViewUrl ||
+  currentTask.thumbnailUrl ||
+  currentTask.imageViewUrl ||
+  currentTask.imageUrl) && (
+  <img
+    src={
+      currentTask.thumbnailViewUrl ||
+      currentTask.thumbnailUrl ||
+      currentTask.imageViewUrl ||
+      currentTask.imageUrl
+    }
+    alt="Task attachment"
+    className="w-full h-48 object-cover rounded-xl"
+  />
+)}
+
+{currentTask.taskId && <ImageUpload taskId={currentTask.taskId} />}
 
           <p className="text-gray-600">{currentTask.description}</p>
 
