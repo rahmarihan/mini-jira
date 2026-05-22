@@ -97,6 +97,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   hydrateFromStorage() {
     if (typeof window === 'undefined') return;
     const hydrated = authService.hydrate();
+    if (hydrated.user?.role) {
+      document.cookie = `role=${hydrated.user.role}; path=/; SameSite=Lax`;
+    }
     set({
       user: hydrated.user,
       accessToken: hydrated.accessToken,

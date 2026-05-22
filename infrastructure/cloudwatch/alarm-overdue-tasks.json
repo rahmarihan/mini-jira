@@ -1,0 +1,15 @@
+{
+  "AlarmName": "mini-jira-overdue-tasks-high",
+  "AlarmDescription": "SNS alert when overdue Mini-Jira tasks exceed threshold (wire to daily-digest-topic or ops email subscription).",
+  "ActionsEnabled": true,
+  "AlarmActions": ["arn:aws:sns:eu-north-1:507210367772:daily-digest-topic"],
+  "MetricName": "OverdueTaskCount",
+  "Namespace": "MiniJira/Tasks",
+  "Statistic": "Maximum",
+  "Period": 300,
+  "EvaluationPeriods": 2,
+  "DatapointsToAlarm": 2,
+  "Threshold": 10,
+  "ComparisonOperator": "GreaterThanThreshold",
+  "TreatMissingData": "notBreaching"
+}

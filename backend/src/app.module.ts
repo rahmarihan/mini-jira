@@ -1,5 +1,6 @@
 // backend/src/app.module.ts
 import { Module } from '@nestjs/common';
+import { CommonModule } from './common/common.module';
 import { ConfigModule } from '@nestjs/config';
 import { awsConfig } from '../config/aws.config';
 import { cognitoConfig } from '../config/cognito.config';
@@ -23,6 +24,7 @@ import { AppService } from './app.service';
       load: [awsConfig, cognitoConfig],
       validate,
     }),
+    CommonModule,
     DynamoModule,
     AuthModule,
     TasksModule,

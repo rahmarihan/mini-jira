@@ -13,9 +13,9 @@ import {
 
 import { TasksService } from './tasks.service';
 
-import type { CreateTaskDto } from './dto/create-task.dto';
-import type { UpdateTaskDto } from './dto/update-task.dto';
-import type { UpdateTaskStatusDto } from './dto/update-task-status.dto';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
+import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';

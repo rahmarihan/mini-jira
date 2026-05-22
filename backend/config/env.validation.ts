@@ -44,6 +44,18 @@ class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  DYNAMODB_ACTIVITY_LOGS_TABLE = 'ActivityLogs';
+
+  @IsString()
+  @IsOptional()
+  FRONTEND_ORIGIN?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUDWATCH_METRICS_ENABLED?: string;
+
+  @IsString()
+  @IsOptional()
   S3_ORIGINAL_IMAGES_BUCKET = 'mini-jira-original-images-giu';
 
   @IsString()

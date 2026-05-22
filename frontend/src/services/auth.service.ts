@@ -9,6 +9,14 @@ export interface AuthTokens {
   tokenType?: string;
 }
 
+export interface UserOption {
+  userId: string;
+  name: string;
+  email: string;
+  teamId: string;
+  role: string;
+}
+
 export interface AuthResponse extends AuthTokens {
   user: User;
   message?: string;
@@ -29,6 +37,12 @@ const TOKEN_KEYS = {
 };
 
 export const authService = {
+
+  async getAll(): Promise<UserOption[]> {
+    const res = await api.get('/auth/users');
+    return res.data;
+  },
+
   async login(email: string, password: string): Promise<AuthResponse> {
     const res = await api.post<AuthResponse>('/auth/login', { email, password });
     this.persistAuth(res.data);
@@ -50,6 +64,7 @@ export const authService = {
     Object.values(TOKEN_KEYS).forEach((key) => localStorage.removeItem(key));
     localStorage.removeItem('token');
     document.cookie = 'token=; Max-Age=0; path=/';
+    document.cookie = 'role=; Max-Age=0; path=/';
   },
 
   persistAuth(data: AuthResponse) {
@@ -65,6 +80,7 @@ export const authService = {
       localStorage.setItem(TOKEN_KEYS.refreshToken, data.refreshToken);
     }
     localStorage.setItem(TOKEN_KEYS.user, JSON.stringify(data.user));
+    document.cookie = `role=${data.user.role}; path=/; SameSite=Lax`;
   },
 
   hydrate() {

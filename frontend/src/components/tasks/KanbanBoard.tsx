@@ -1,4 +1,3 @@
-// frontend/src/components/tasks/KanbanBoard.tsx
 'use client';
 import { useState } from 'react';
 import {
@@ -14,10 +13,12 @@ import { useTaskStore } from '../../store/task.store';
 interface Props {
   tasks: Task[];
   onStatusChange: (taskId: string, status: TaskStatus) => Promise<void>;
+  onDeleteTask?: (taskId: string) => Promise<void>;
   loading: boolean;
+  isManager?: boolean;
 }
 
-export default function KanbanBoard({ tasks, onStatusChange, loading }: Props) {
+export default function KanbanBoard({ tasks, onStatusChange, onDeleteTask, loading, isManager }: Props) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const { openModal, isModalOpen, selectedTask, closeModal } = useTaskStore();
 
@@ -65,6 +66,8 @@ export default function KanbanBoard({ tasks, onStatusChange, loading }: Props) {
               status={status}
               tasks={getTasksByStatus(status)}
               onTaskClick={openModal}
+              onDeleteTask={onDeleteTask}
+              isManager={isManager}
             />
           ))}
         </div>
