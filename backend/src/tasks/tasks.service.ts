@@ -51,6 +51,7 @@ export class TasksService {
   }
 
   async create(dto: CreateTaskDto, user: CurrentUserPayload) {
+    console.log('DEBUG create dto:', JSON.stringify(dto)); // remove after confirming
     const task = {
       taskId: uuidv4(),
       ...dto,
