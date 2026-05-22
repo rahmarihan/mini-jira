@@ -28,6 +28,11 @@ export class RolesGuard implements CanActivate {
     const { user } = context
       .switchToHttp()
       .getRequest<Request & { user?: AuthUser }>();
+    if (!user?.role) {
+      throw new ForbiddenException(
+        'Your account is pending Manager role assignment',
+      );
+    }
     const role = String(user?.role || '').toLowerCase();
     const allowed = requiredRoles.map((item) => item.toLowerCase());
     if (!allowed.includes(role)) {

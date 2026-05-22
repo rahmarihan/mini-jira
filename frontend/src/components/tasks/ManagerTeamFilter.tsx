@@ -1,7 +1,7 @@
 // frontend/src/components/tasks/ManagerTeamFilter.tsx
 'use client';
 
-interface Team { teamId: string; name: string; }
+interface Team { teamId: string; name?: string; }
 
 interface Props {
   teams: Team[];
@@ -20,7 +20,9 @@ export default function ManagerTeamFilter({ teams, selectedTeamId, onChange }: P
       >
         <option value="">All Teams</option>
         {teams.map((team) => (
-          <option key={team.teamId} value={team.teamId}>{team.name}</option>
+          <option key={team.teamId} value={team.teamId}>
+            {team.name || team.teamId}
+          </option>
         ))}
       </select>
     </div>

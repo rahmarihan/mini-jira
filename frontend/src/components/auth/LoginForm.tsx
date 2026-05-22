@@ -17,11 +17,33 @@ export default function LoginForm() {
     event.preventDefault();
     setError(null);
 
+    if (!email.trim()) {
+      setError('Email is required');
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setError('Enter a valid email address');
+      return;
+    }
+    if (!password) {
+      setError('Password is required');
+      return;
+    }
+
     try {
       const { user } = await login(email, password);
+      if (!user.role || !user.teamId) {
+        setError('Your account is pending Manager assignment.');
+        return;
+      }
       router.push(getDefaultRoute(user.role));
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Login failed'));
+      const message = getErrorMessage(err, 'Login failed');
+      setError(
+        message.toLowerCase().includes('not confirmed')
+          ? 'User is not confirmed. Check your email for the confirmation code.'
+          : message,
+      );
     }
   };
 

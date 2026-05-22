@@ -15,7 +15,10 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 export class DynamoService {
   private readonly client: DynamoDBClient;
   private readonly logger = new Logger(DynamoService.name);
-  private readonly localTables = new Map<string, Map<string, Record<string, any>>>();
+  private readonly localTables = new Map<
+    string,
+    Map<string, Record<string, any>>
+  >();
   private warnedAboutFallback = false;
 
   constructor() {
@@ -155,7 +158,9 @@ export class DynamoService {
       return false;
     }
 
-    return this.isMissingCredentialsError(error) || this.isMissingTableError(error);
+    return (
+      this.isMissingCredentialsError(error) || this.isMissingTableError(error)
+    );
   }
 
   private isMissingCredentialsError(error: unknown) {
@@ -216,8 +221,14 @@ export class DynamoService {
     this.getLocalTable(tableName).delete(this.getLocalKey(key));
   }
 
-  private localQueryByIndex(tableName: string, keyName: string, keyValue: string) {
-    return this.localScan(tableName).filter((item) => item[keyName] === keyValue);
+  private localQueryByIndex(
+    tableName: string,
+    keyName: string,
+    keyValue: string,
+  ) {
+    return this.localScan(tableName).filter(
+      (item) => item[keyName] === keyValue,
+    );
   }
 
   private localScan(tableName: string) {

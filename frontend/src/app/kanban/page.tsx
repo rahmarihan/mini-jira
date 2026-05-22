@@ -11,11 +11,7 @@ import CreateTaskForm from "../../components/tasks/CreateTaskForm";
 import ManagerTeamFilter from "../../components/tasks/ManagerTeamFilter";
 import { TaskStatus } from "../../types/task";
 import { getErrorMessage } from "../../lib/error";
-
-const MOCK_TEAMS = [
-  { teamId: "Frontend", name: "Frontend" },
-  { teamId: "Backend", name: "Backend" },
-];
+import { userService, type Team } from "../../services/user.service";
 
 export default function KanbanPage() {
   const router = useRouter();
@@ -23,9 +19,10 @@ export default function KanbanPage() {
   const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
   const idToken = useAuthStore((state) => state.idToken);
   const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [teams, setTeams] = useState<Team[]>([]);
   const { tasks, loading, error, createTask, updateStatus } = useTasks(
     selectedTeamId || undefined,
-    Boolean(idToken),
+    Boolean(idToken) && Boolean(user?.role && user?.teamId),
   );
   const { isCreateFormOpen, openCreateForm, closeCreateForm } = useTaskStore();
   const isManager = user?.role === "Manager";
@@ -41,6 +38,20 @@ export default function KanbanPage() {
     }
   }, [isAuthenticated, router]);
 
+  useEffect(() => {
+    if (!isManager) return;
+
+    async function loadTeams() {
+      try {
+        setTeams(await userService.getTeams());
+      } catch {
+        setTeams([]);
+      }
+    }
+
+    void loadTeams();
+  }, [isManager]);
+
   const handleStatusChange = async (taskId: string, status: TaskStatus) => {
     try {
       await updateStatus(taskId, status);
@@ -51,12 +62,24 @@ export default function KanbanPage() {
 
   return (
     <div className="p-6">
+      {user && (!user.role || !user.teamId) ? (
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <h1 className="text-xl font-semibold text-gray-900">
+            Your account is pending Manager assignment.
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">
+            A Manager needs to assign your role and team before Kanban data is
+            available.
+          </p>
+        </div>
+      ) : (
+        <>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Kanban Board</h1>
         <div className="flex items-center gap-4">
           {isManager && (
             <ManagerTeamFilter
-              teams={MOCK_TEAMS}
+              teams={teams}
               selectedTeamId={selectedTeamId}
               onChange={setSelectedTeamId}
             />
@@ -86,6 +109,8 @@ export default function KanbanPage() {
           onCancel={closeCreateForm}
           isManager={isManager}
         />
+      )}
+        </>
       )}
     </div>
   );

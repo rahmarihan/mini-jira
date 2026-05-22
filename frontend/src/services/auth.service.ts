@@ -1,5 +1,5 @@
 import api from '../../lib/axios';
-import type { TeamId, User } from '../types/user';
+import type { User } from '../types/user';
 
 export interface AuthTokens {
   accessToken?: string;
@@ -12,13 +12,22 @@ export interface AuthTokens {
 export interface AuthResponse extends AuthTokens {
   user: User;
   message?: string;
+  userConfirmed?: boolean;
 }
 
 export interface RegisterInput {
   email: string;
   password: string;
   name: string;
-  teamId: Extract<TeamId, 'Frontend' | 'Backend'>;
+}
+
+export interface ConfirmRegistrationInput {
+  email: string;
+  code: string;
+}
+
+export interface MessageResponse {
+  message: string;
 }
 
 const TOKEN_KEYS = {
@@ -37,6 +46,20 @@ export const authService = {
 
   async register(data: RegisterInput): Promise<AuthResponse> {
     const res = await api.post<AuthResponse>('/auth/register', data);
+    return res.data;
+  },
+
+  async confirmRegistration(
+    data: ConfirmRegistrationInput,
+  ): Promise<MessageResponse> {
+    const res = await api.post<MessageResponse>('/auth/register/confirm', data);
+    return res.data;
+  },
+
+  async resendConfirmationCode(email: string): Promise<MessageResponse> {
+    const res = await api.post<MessageResponse>('/auth/register/resend-code', {
+      email,
+    });
     return res.data;
   },
 
@@ -66,7 +89,9 @@ export const authService = {
       localStorage.setItem(TOKEN_KEYS.refreshToken, data.refreshToken);
     }
     localStorage.setItem(TOKEN_KEYS.user, JSON.stringify(data.user));
-    document.cookie = `role=${data.user.role}; path=/; SameSite=Lax`;
+    if (data.user.role) {
+      document.cookie = `role=${data.user.role}; path=/; SameSite=Lax`;
+    }
   },
 
   hydrate() {

@@ -4,6 +4,8 @@ import { create } from 'zustand';
 import {
   authService,
   type AuthResponse,
+  type ConfirmRegistrationInput,
+  type MessageResponse,
   type RegisterInput,
 } from '../services/auth.service';
 import { getErrorMessage } from '../lib/error';
@@ -19,6 +21,10 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<AuthResponse>;
   register: (data: RegisterInput) => Promise<AuthResponse>;
+  confirmRegistration: (
+    data: ConfirmRegistrationInput,
+  ) => Promise<MessageResponse>;
+  resendConfirmationCode: (email: string) => Promise<MessageResponse>;
   logout: () => void;
   fetchMe: () => Promise<User | null>;
   hydrateFromStorage: () => void;
@@ -61,6 +67,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return response;
     } catch (error: unknown) {
       const message = getErrorMessage(error, 'Registration failed');
+      set({ error: message, isLoading: false });
+      throw error;
+    }
+  },
+
+  async confirmRegistration(data) {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authService.confirmRegistration(data);
+      set({ isLoading: false });
+      return response;
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Could not confirm account');
+      set({ error: message, isLoading: false });
+      throw error;
+    }
+  },
+
+  async resendConfirmationCode(email) {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authService.resendConfirmationCode(email);
+      set({ isLoading: false });
+      return response;
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Could not resend confirmation code');
       set({ error: message, isLoading: false });
       throw error;
     }

@@ -20,6 +20,10 @@ class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  COGNITO_DEMO_CONFIRMATION_EMAIL?: string;
+
+  @IsString()
+  @IsOptional()
   DYNAMODB_USERS_TABLE = 'Mini-jira-Users';
 
   @IsString()
@@ -87,6 +91,8 @@ export function validate(config: Record<string, unknown>) {
     COGNITO_ISSUER:
       validatedConfig.COGNITO_ISSUER ||
       `https://cognito-idp.${validatedConfig.AWS_REGION}.amazonaws.com/${validatedConfig.COGNITO_USER_POOL_ID}`,
+    COGNITO_DEMO_CONFIRMATION_EMAIL:
+      validatedConfig.COGNITO_DEMO_CONFIRMATION_EMAIL,
     DYNAMODB_USERS_TABLE: validatedConfig.DYNAMODB_USERS_TABLE,
     DYNAMODB_TEAMS_TABLE: validatedConfig.DYNAMODB_TEAMS_TABLE,
     DYNAMODB_TASKS_TABLE: validatedConfig.DYNAMODB_TASKS_TABLE,

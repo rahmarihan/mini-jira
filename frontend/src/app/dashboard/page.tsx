@@ -26,18 +26,14 @@ import { Separator } from '@/components/ui/separator';
 import { computeAssigneeStats, computeDashboardMetrics } from '@/src/lib/dashboard';
 import { formatDate } from '@/lib/utils';
 import type { TeamId } from '@/src/types/user';
-
-const MOCK_TEAMS = [
-  { teamId: 'Frontend', name: 'Frontend' },
-  { teamId: 'Backend', name: 'Backend' },
-];
+import { userService, type Team } from '@/src/services/user.service';
 
 function resolveManagerTeamFilter(teamId?: TeamId): string | undefined {
   if (!teamId || teamId === 'ALL') return undefined;
   return teamId;
 }
 
-function dashboardSubtitle(user: { role: string; teamId?: TeamId }) {
+function dashboardSubtitle(user: { role?: string; teamId?: TeamId }) {
   if (user.role === 'Manager') {
     return user.teamId === 'ALL'
       ? 'Company-wide overview (all teams)'
@@ -53,6 +49,7 @@ export default function DashboardPage() {
   const idToken = useAuthStore((state) => state.idToken);
   const isManager = user?.role === 'Manager';
   const [managerTeamFilter, setManagerTeamFilter] = useState('');
+  const [teams, setTeams] = useState<Team[]>([]);
 
   const taskTeamScope = isManager
     ? managerTeamFilter || resolveManagerTeamFilter(user?.teamId)
@@ -62,7 +59,7 @@ export default function DashboardPage() {
 
   const { tasks, loading, error, createTask } = useTasks(
     taskTeamScope,
-    Boolean(idToken) && Boolean(user),
+    Boolean(idToken) && Boolean(user?.role && user?.teamId),
   );
   const { isCreateFormOpen, openCreateForm, closeCreateForm } = useTaskStore();
 
@@ -83,6 +80,23 @@ export default function DashboardPage() {
     }
   }, [error]);
 
+  useEffect(() => {
+    if (!isManager) return;
+
+    async function loadTeams() {
+      try {
+        setTeams(await userService.getTeams());
+      } catch (err: unknown) {
+        toast.error('Failed to load teams', {
+          description:
+            err instanceof Error ? err.message : 'Team filter is unavailable',
+        });
+      }
+    }
+
+    void loadTeams();
+  }, [isManager]);
+
   const metrics = useMemo(() => computeDashboardMetrics(tasks), [tasks]);
   const assigneeStats = useMemo(() => computeAssigneeStats(tasks), [tasks]);
   const recentTasks = useMemo(
@@ -98,6 +112,20 @@ export default function DashboardPage() {
 
   if (!user) {
     return <DashboardSkeletonLoader />;
+  }
+
+  if (!user.role || !user.teamId) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Your account is pending Manager assignment.</CardTitle>
+          <CardDescription>
+            A Manager needs to assign your role and team before workspace data is
+            available.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   if (loading) {
@@ -137,7 +165,7 @@ export default function DashboardPage() {
 
       {isManager && (
         <ManagerTeamFilter
-          teams={MOCK_TEAMS}
+          teams={teams}
           selectedTeamId={managerTeamFilter}
           onChange={setManagerTeamFilter}
         />
@@ -197,7 +225,7 @@ export default function DashboardPage() {
                 const completionRate = total ? Math.round((member.done / total) * 100) : 0;
 
                 return (
-                  <div key={member.name} className="space-y-2">
+                  <div key={member.assigneeId} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{member.name}</span>
                       <span className="text-muted-foreground tabular-nums">

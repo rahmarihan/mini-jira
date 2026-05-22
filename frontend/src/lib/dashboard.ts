@@ -15,11 +15,15 @@ export function computeDashboardMetrics(tasks: Task[]): DashboardMetrics {
 
 /** Simple assignee breakdown for Team Performance (M4 may replace with analytics API). */
 export function computeAssigneeStats(tasks: Task[]) {
-  const map = new Map<string, { name: string; active: number; done: number }>();
+  const map = new Map<
+    string,
+    { assigneeId: string; name: string; active: number; done: number }
+  >();
 
   for (const task of tasks) {
     const key = task.assigneeId || 'unassigned';
     const existing = map.get(key) ?? {
+      assigneeId: key,
       name: task.assigneeName || 'Unassigned',
       active: 0,
       done: 0,

@@ -27,6 +27,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/kanban', label: 'Kanban', icon: LayoutGrid },
+  { href: '/dashboard/employees', label: 'Employees', icon: Users, managerOnly: true },
   { href: '/reports', label: 'Team Reports', icon: BarChart3, managerOnly: true },
 ];
 

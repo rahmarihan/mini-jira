@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getErrorMessage } from '../../lib/error';
 import { Task, Priority } from '../../types/task';
-import { DEMO_ASSIGNEE_PRESETS } from '../../config/demo-users';
+import { userService, type Team } from '../../services/user.service';
+import type { User } from '../../types/user';
 
 interface Props {
   onSubmit: (data: Partial<Task>) => Promise<Task>;
@@ -33,6 +34,27 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props)
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    if (!isManager) return;
+
+    async function loadAssignmentData() {
+      try {
+        const [loadedTeams, loadedUsers] = await Promise.all([
+          userService.getTeams(),
+          userService.getUsers(),
+        ]);
+        setTeams(loadedTeams);
+        setUsers(loadedUsers.filter((user) => user.role && user.teamId));
+      } catch (err: unknown) {
+        setError(getErrorMessage(err, 'Failed to load assignment data'));
+      }
+    }
+
+    void loadAssignmentData();
+  }, [isManager]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -40,14 +62,14 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props)
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const applyAssigneePreset = (key: string) => {
-    const preset = DEMO_ASSIGNEE_PRESETS.find((p) => p.key === key);
-    if (!preset) return;
+  const applyAssignee = (userId: string) => {
+    const selected = users.find((user) => user.userId === userId);
+    if (!selected) return;
     setForm((prev) => ({
       ...prev,
-      assigneeName: preset.assigneeName,
-      assigneeId: preset.assigneeId || prev.assigneeId,
-      teamId: preset.teamId,
+      assigneeName: selected.name || selected.email,
+      assigneeId: selected.userId,
+      teamId: selected.teamId || prev.teamId,
     }));
   };
 
@@ -111,19 +133,19 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props)
           {isManager && (
             <>
               <label className="block text-xs font-medium text-gray-600">
-                Quick assign (demo)
+                Assignee
               </label>
               <select
                 defaultValue=""
                 onChange={(e) => {
-                  if (e.target.value) applyAssigneePreset(e.target.value);
+                  if (e.target.value) applyAssignee(e.target.value);
                 }}
                 className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Select Sara or Omar…</option>
-                {DEMO_ASSIGNEE_PRESETS.map((p) => (
-                  <option key={p.key} value={p.key}>
-                    {p.label}
+                <option value="">Select assignee</option>
+                {users.map((user) => (
+                  <option key={user.userId} value={user.userId}>
+                    {user.name || user.email} ({user.teamId})
                   </option>
                 ))}
               </select>
@@ -152,8 +174,11 @@ export default function CreateTaskForm({ onSubmit, onCancel, isManager }: Props)
               className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Team *</option>
-              <option value="Frontend">Frontend</option>
-              <option value="Backend">Backend</option>
+              {teams.map((team) => (
+                <option key={team.teamId} value={team.teamId}>
+                  {team.name || team.teamId}
+                </option>
+              ))}
             </select>
           )}
         </div>

@@ -9,6 +9,8 @@ export function useAuth() {
     isLoading,
     login,
     register,
+    confirmRegistration,
+    resendConfirmationCode,
     logout,
     fetchMe,
   } = useAuthStore();
@@ -19,9 +21,12 @@ export function useAuth() {
     isLoading,
     login,
     register,
+    confirmRegistration,
+    resendConfirmationCode,
     logout,
     fetchMe,
     role: user?.role,
     teamId: user?.teamId,
+    isPendingAssignment: Boolean(user && (!user.role || !user.teamId)),
   };
 }
