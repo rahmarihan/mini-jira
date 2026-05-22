@@ -53,6 +53,30 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   DYNAMODB_FALLBACK_TO_MEMORY = 'true';
+
+  @IsString()
+  @IsOptional()
+  TASK_ASSIGNMENT_TOPIC_ARN?: string;
+
+  @IsString()
+  @IsOptional()
+  DAILY_DIGEST_TOPIC_ARN?: string;
+
+  @IsString()
+  @IsOptional()
+  TASK_ASSIGNMENT_QUEUE_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  TASK_ASSIGNMENT_DLQ_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  ASSIGNMENT_WORKER_LAMBDA_ARN?: string;
+
+  @IsString()
+  @IsOptional()
+  DAILY_REMINDER_LAMBDA_ARN?: string;
 }
 
 export function validate(config: Record<string, unknown>) {
@@ -84,5 +108,11 @@ export function validate(config: Record<string, unknown>) {
     S3_ORIGINAL_IMAGES_BUCKET: validatedConfig.S3_ORIGINAL_IMAGES_BUCKET,
     S3_RESIZED_IMAGES_BUCKET: validatedConfig.S3_RESIZED_IMAGES_BUCKET,
     DYNAMODB_FALLBACK_TO_MEMORY: validatedConfig.DYNAMODB_FALLBACK_TO_MEMORY,
+    TASK_ASSIGNMENT_TOPIC_ARN: validatedConfig.TASK_ASSIGNMENT_TOPIC_ARN,
+    DAILY_DIGEST_TOPIC_ARN: validatedConfig.DAILY_DIGEST_TOPIC_ARN,
+    TASK_ASSIGNMENT_QUEUE_URL: validatedConfig.TASK_ASSIGNMENT_QUEUE_URL,
+    TASK_ASSIGNMENT_DLQ_URL: validatedConfig.TASK_ASSIGNMENT_DLQ_URL,
+    ASSIGNMENT_WORKER_LAMBDA_ARN: validatedConfig.ASSIGNMENT_WORKER_LAMBDA_ARN,
+    DAILY_REMINDER_LAMBDA_ARN: validatedConfig.DAILY_REMINDER_LAMBDA_ARN,
   };
 }

@@ -1,5 +1,4 @@
 // backend/src/tasks/tasks.service.ts
-import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import {
   Injectable,
   NotFoundException,
@@ -9,6 +8,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { DynamoService } from '../dynamo/dynamo.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
@@ -20,35 +20,11 @@ export class TasksService {
   private readonly tableName =
     process.env.DYNAMODB_TASKS_TABLE || 'Mini-jira-Tasks';
 
-  private readonly snsClient = new SNSClient({
-    region: process.env.AWS_REGION || 'eu-north-1',
-  });
-
   constructor(
     private readonly dynamo: DynamoService,
     private readonly auditLog: AuditLogService,
+    private readonly notifications: NotificationsService,
   ) {}
-
-  private async publishTaskAssigned(task: any, assignedBy: string) {
-    try {
-      await this.snsClient.send(
-        new PublishCommand({
-          TopicArn: 'arn:aws:sns:eu-north-1:507210367772:task-assignment-topic',
-          Message: JSON.stringify({
-            eventType: 'TASK_ASSIGNED',
-            taskId: task.taskId,
-            title: task.title,
-            teamId: task.teamId,
-            assignedBy: assignedBy,
-            assignee: task.assigneeName,
-          }),
-        }),
-      );
-    } catch (err) {
-      console.error('SNS publish failed:', err);
-      // don't throw — SNS failure shouldn't break task creation
-    }
-  }
 
   async create(dto: CreateTaskDto, user: CurrentUserPayload) {
     const task = {
@@ -61,7 +37,19 @@ export class TasksService {
       updatedAt: new Date().toISOString(),
     };
     await this.dynamo.putItem(this.tableName, task);
-    await this.publishTaskAssigned(task, user.name);
+
+    // Publish task assignment event to SNS/SQS
+    if (task.assigneeId) {
+      await this.notifications.publishTaskAssigned({
+        taskId: task.taskId,
+        title: task.title,
+        teamId: task.teamId,
+        assignedBy: user.name,
+        assigneeName: task.assigneeName,
+        assigneeId: task.assigneeId,
+      });
+    }
+
     return task;
   }
 
