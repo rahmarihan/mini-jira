@@ -1,36 +1,12 @@
 // frontend/src/lib/axios.ts
 import axios from "axios";
 
-function getApiBaseUrl() {
-  const configuredUrl =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-  if (typeof window === "undefined") {
-    return configuredUrl;
-  }
-
-  const configured = new URL(configuredUrl);
-  const pageHostname = window.location.hostname;
-  const shouldUsePageHost =
-    configured.hostname === "localhost" &&
-    pageHostname !== "localhost" &&
-    pageHostname !== "127.0.0.1";
-
-  if (shouldUsePageHost) {
-    configured.hostname = pageHostname;
-  }
-
-  return configured.toString();
-}
-
 const api = axios.create({
-  baseURL: getApiBaseUrl(),
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
   headers: { "Content-Type": "application/json" },
 });
 
 api.interceptors.request.use((config) => {
-  // This MVP sends the Cognito ID token to the backend because it contains
-  // custom:role and custom:teamId. CognitoAuthGuard verifies tokenUse: "id".
   const token =
     typeof window !== "undefined"
       ? localStorage.getItem("mini-jira.idToken")
