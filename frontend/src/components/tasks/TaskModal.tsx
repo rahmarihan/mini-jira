@@ -1,3 +1,4 @@
+// frontend/src/components/tasks/TaskModal.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { Task, STATUS_LABELS } from '../../types/task';
@@ -67,23 +68,23 @@ export default function TaskModal({ task, onClose }: Props) {
         </div>
 
         <div className="p-6 space-y-4">
-         {(currentTask.thumbnailViewUrl ||
-  currentTask.thumbnailUrl ||
-  currentTask.imageViewUrl ||
-  currentTask.imageUrl) && (
-  <img
-    src={
-      currentTask.thumbnailViewUrl ||
-      currentTask.thumbnailUrl ||
-      currentTask.imageViewUrl ||
-      currentTask.imageUrl
-    }
-    alt="Task attachment"
-    className="w-full h-48 object-cover rounded-xl"
-  />
-)}
+          {(currentTask.thumbnailViewUrl ||
+            currentTask.thumbnailUrl ||
+            currentTask.imageViewUrl ||
+            currentTask.imageUrl) && (
+            <img
+              src={
+                currentTask.thumbnailViewUrl ||
+                currentTask.thumbnailUrl ||
+                currentTask.imageViewUrl ||
+                currentTask.imageUrl
+              }
+              alt="Task attachment"
+              className="w-full h-48 object-cover rounded-xl"
+            />
+          )}
 
-{currentTask.taskId && <ImageUpload taskId={currentTask.taskId} />}
+          {currentTask.taskId && <ImageUpload taskId={currentTask.taskId} />}
 
           <p className="text-gray-600">{currentTask.description}</p>
 
