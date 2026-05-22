@@ -1,14 +1,16 @@
-'use client';
+"use client";
 
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Task } from '../../types/task';
-import { formatDate, isOverdue } from '../../../lib/utils';
+import type { MouseEvent } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+import { Task } from "../../types/task";
+import { formatDate, isOverdue } from "../../../lib/utils";
 
 const PRIORITY_COLORS = {
-  LOW: 'bg-green-100 text-green-700',
-  MEDIUM: 'bg-yellow-100 text-yellow-700',
-  HIGH: 'bg-red-100 text-red-700',
+  LOW: "bg-green-100 text-green-700",
+  MEDIUM: "bg-yellow-100 text-yellow-700",
+  HIGH: "bg-red-100 text-red-700",
 };
 
 interface Props {
@@ -39,8 +41,15 @@ export default function TaskCard({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const imageSrc =
+    task.thumbnailViewUrl ||
+    task.imageViewUrl ||
+    task.thumbnailUrl ||
+    task.imageUrl;
+
+  const handleDelete = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+
     if (confirm(`Delete "${task.title}"?`)) {
       onDelete?.(task.taskId);
     }
@@ -53,14 +62,14 @@ export default function TaskCard({
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all relative group"
+      className="group relative cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
     >
-      {/* ✅ merged: delete button (HEAD) */}
-      {isManager && (
+      {isManager && onDelete && (
         <button
           onClick={handleDelete}
-          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all p-1 rounded"
+          className="absolute right-2 top-2 rounded p-1 text-gray-300 opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
           title="Delete task"
+          type="button"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -79,30 +88,21 @@ export default function TaskCard({
         </button>
       )}
 
-      {/* ✅ merged: image support (other branch) */}
-      {task.thumbnailUrl && (
+      {imageSrc && (
         <img
-          src={task.thumbnailUrl}
-          alt="Task thumbnail"
-          className="w-full h-24 object-cover rounded mb-2"
+          src={imageSrc}
+          alt="Task attachment"
+          className="mb-2 h-24 w-full rounded object-cover"
         />
       )}
 
-      {!task.thumbnailUrl && task.imageUrl && (
-        <img
-          src={task.imageUrl}
-          alt="task"
-          className="w-full h-24 object-cover rounded mb-2"
-        />
-      )}
-
-      <p className="font-medium text-gray-800 text-sm mb-2 line-clamp-2 pr-6">
+      <p className="mb-2 line-clamp-2 pr-6 text-sm font-medium text-gray-800">
         {task.title}
       </p>
 
       <div className="flex items-center justify-between">
         <span
-          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
             PRIORITY_COLORS[task.priority]
           }`}
         >
@@ -111,19 +111,16 @@ export default function TaskCard({
 
         <span
           className={`text-xs ${
-            isOverdue(task.deadline) &&
-            task.status !== 'DONE'
-              ? 'text-red-500 font-semibold'
-              : 'text-gray-400'
+            isOverdue(task.deadline) && task.status !== "DONE"
+              ? "font-semibold text-red-500"
+              : "text-gray-400"
           }`}
         >
           {formatDate(task.deadline)}
         </span>
       </div>
 
-      <p className="text-xs text-gray-400 mt-2">
-        → {task.assigneeName}
-      </p>
+      <p className="mt-2 text-xs text-gray-400">→ {task.assigneeName}</p>
     </div>
   );
 }

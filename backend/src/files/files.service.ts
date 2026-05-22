@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -18,11 +19,14 @@ export class FilesService {
     process.env.S3_ORIGINAL_IMAGES_BUCKET ||
     process.env.S3_ORIGINAL_BUCKET ||
     'mini-jira-original-images-giu';
+
   private readonly resizedBucket =
     process.env.S3_RESIZED_IMAGES_BUCKET ||
     process.env.S3_RESIZED_BUCKET ||
     'mini-jira-resized-images-giu';
+
   private readonly region = process.env.AWS_REGION || 'eu-north-1';
+
   private readonly s3 = new S3Client({
     region: this.region,
   });
@@ -45,8 +49,13 @@ export class FilesService {
 
     const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '-');
     const objectFileName = `${randomUUID()}-${safeFileName}`;
+
     const key = `task/${taskId}/${objectFileName}`;
-    const thumbnailFileName = `${this.fileNameWithoutExtension(objectFileName)}-scaled.jpg`;
+
+    const thumbnailFileName = `${this.fileNameWithoutExtension(
+      objectFileName,
+    )}-scaled.jpg`;
+
     const thumbnailKey = `thumbnails/task/${taskId}/${thumbnailFileName}`;
 
     const uploadUrl = await getSignedUrl(
@@ -74,7 +83,9 @@ export class FilesService {
   }
 
   async deleteTaskImages(imageKey?: string, thumbnailKey?: string) {
-    const originalBucket = process.env.S3_ORIGINAL_BUCKET || this.originalsBucket;
+    const originalBucket =
+      process.env.S3_ORIGINAL_BUCKET || this.originalsBucket;
+
     const resizedBucket = process.env.S3_RESIZED_BUCKET || this.resizedBucket;
 
     if (imageKey) {
@@ -96,8 +107,36 @@ export class FilesService {
     }
   }
 
+  async createThumbnailViewUrl(thumbnailKey?: string) {
+    if (!thumbnailKey) return undefined;
+
+    return getSignedUrl(
+      this.s3,
+      new GetObjectCommand({
+        Bucket: this.resizedBucket,
+        Key: thumbnailKey,
+      }),
+      { expiresIn: 300 },
+    );
+  }
+
+  async createImageViewUrl(imageKey?: string) {
+    if (!imageKey) return undefined;
+
+    return getSignedUrl(
+      this.s3,
+      new GetObjectCommand({
+        Bucket: this.originalsBucket,
+        Key: imageKey,
+      }),
+      { expiresIn: 300 },
+    );
+  }
+
   private publicS3Url(bucket: string, key: string) {
-    return `https://${bucket}.s3.${this.region}.amazonaws.com/${encodeURIComponent(key).replace(/%2F/g, '/')}`;
+    return `https://${bucket}.s3.${this.region}.amazonaws.com/${encodeURIComponent(
+      key,
+    ).replace(/%2F/g, '/')}`;
   }
 
   private fileNameWithoutExtension(fileName: string) {
