@@ -1,3 +1,4 @@
+// frontend/src/components/tasks/TaskModal.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { Task, STATUS_LABELS } from '../../types/task';
