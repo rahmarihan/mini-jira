@@ -44,8 +44,10 @@ export class FilesService {
     }
 
     const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '-');
-    const key = `task/${taskId}/${randomUUID()}-${safeFileName}`;
-    const thumbnailKey = `thumbnails/${key}`;
+    const objectFileName = `${randomUUID()}-${safeFileName}`;
+    const key = `task/${taskId}/${objectFileName}`;
+    const thumbnailFileName = `${this.fileNameWithoutExtension(objectFileName)}-scaled.jpg`;
+    const thumbnailKey = `thumbnails/task/${taskId}/${thumbnailFileName}`;
 
     const uploadUrl = await getSignedUrl(
       this.s3,
@@ -72,10 +74,13 @@ export class FilesService {
   }
 
   async deleteTaskImages(imageKey?: string, thumbnailKey?: string) {
+    const originalBucket = process.env.S3_ORIGINAL_BUCKET || this.originalsBucket;
+    const resizedBucket = process.env.S3_RESIZED_BUCKET || this.resizedBucket;
+
     if (imageKey) {
       await this.s3.send(
         new DeleteObjectCommand({
-          Bucket: this.originalsBucket,
+          Bucket: originalBucket,
           Key: imageKey,
         }),
       );
@@ -84,7 +89,7 @@ export class FilesService {
     if (thumbnailKey) {
       await this.s3.send(
         new DeleteObjectCommand({
-          Bucket: this.resizedBucket,
+          Bucket: resizedBucket,
           Key: thumbnailKey,
         }),
       );
@@ -93,5 +98,11 @@ export class FilesService {
 
   private publicS3Url(bucket: string, key: string) {
     return `https://${bucket}.s3.${this.region}.amazonaws.com/${encodeURIComponent(key).replace(/%2F/g, '/')}`;
+  }
+
+  private fileNameWithoutExtension(fileName: string) {
+    const lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex <= 0) return fileName;
+    return fileName.slice(0, lastDotIndex);
   }
 }
