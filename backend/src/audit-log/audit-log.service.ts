@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DynamoService } from '../dynamo/dynamo.service';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AuditLogService {
@@ -17,7 +17,7 @@ export class AuditLogService {
     newStatus: string;
   }) {
     const item = {
-      logId: uuidv4(),
+      logId: randomUUID(),
       taskId: params.taskId,
       changedBy: params.changedBy,
       changedByName: params.changedByName,
