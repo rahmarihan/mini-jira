@@ -78,26 +78,44 @@ export class DynamoService {
     }
 
     const updateExpressions: string[] = [];
+    const removeExpressions: string[] = [];
     const expressionAttributeNames: Record<string, string> = {};
     const marshaledValues: Record<string, any> = {};
 
     Object.entries(filteredUpdates).forEach(([k, v]) => {
       const nameKey = `#attr_${k}`;
+      expressionAttributeNames[nameKey] = k;
+
+      if (v === null) {
+        removeExpressions.push(nameKey);
+        return;
+      }
+
       const valueKey = `:val_${k}`;
       updateExpressions.push(`${nameKey} = ${valueKey}`);
-      expressionAttributeNames[nameKey] = k;
       // marshall the individual value directly
       marshaledValues[valueKey] = marshall({ _: v })._;
     });
+
+    const expressionParts: string[] = [];
+
+    if (updateExpressions.length > 0) {
+      expressionParts.push(`SET ${updateExpressions.join(', ')}`);
+    }
+
+    if (removeExpressions.length > 0) {
+      expressionParts.push(`REMOVE ${removeExpressions.join(', ')}`);
+    }
 
     try {
       const result = await this.client.send(
         new UpdateItemCommand({
           TableName: tableName,
           Key: marshall(key),
-          UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+          UpdateExpression: expressionParts.join(' '),
           ExpressionAttributeNames: expressionAttributeNames,
-          ExpressionAttributeValues: marshaledValues,
+          ExpressionAttributeValues:
+            updateExpressions.length > 0 ? marshaledValues : undefined,
           ReturnValues: 'ALL_NEW',
         }),
       );
@@ -225,8 +243,16 @@ export class DynamoService {
     const item = {
       ...(table.get(localKey) || {}),
       ...key,
-      ...updates,
     };
+
+    Object.entries(updates).forEach(([field, value]) => {
+      if (value === null) {
+        delete item[field];
+        return;
+      }
+
+      item[field] = value;
+    });
     table.set(localKey, this.cloneItem(item));
     return this.cloneItem(item);
   }

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Task, Priority, TaskStatus, STATUS_ORDER } from "../../types/task";
 import { getErrorMessage } from "../../lib/error";
 import { taskService } from "../../services/task.service";
+import { userService } from "../../services/user.service";
+import type { User } from "../../types/user";
 
 interface Props {
   task: Task;
@@ -32,9 +34,13 @@ export default function EditTaskForm({
     priority: task.priority as Priority,
     deadline: task.deadline ?? "",
     status: task.status as TaskStatus,
+    assigneeId: task.assigneeId ?? "",
+    assigneeName: task.assigneeName ?? "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Only allow adjacent status transitions (same rule as backend)
   const currentIndex = STATUS_ORDER.indexOf(task.status as TaskStatus);
@@ -42,12 +48,63 @@ export default function EditTaskForm({
     (_, i) => Math.abs(i - currentIndex) <= 1,
   );
 
+  useEffect(() => {
+    if (!isManager) return;
+
+    async function loadUsers() {
+      setLoadingUsers(true);
+      setError("");
+
+      try {
+        const loadedUsers = await userService.getUsers();
+        setUsers(loadedUsers);
+      } catch (err: unknown) {
+        setError(getErrorMessage(err, "Failed to load assignees"));
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+
+    void loadUsers();
+  }, [isManager]);
+
+  const assignableUsers = useMemo(
+    () =>
+      users.filter(
+        (user) => user.role === "Employee" && user.teamId === task.teamId,
+      ),
+    [users, task.teamId],
+  );
+
+  const isCurrentAssigneeMissing =
+    !!form.assigneeId &&
+    !assignableUsers.some((user) => user.userId === form.assigneeId);
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >,
   ) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleAssigneeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = users.find((user) => user.userId === e.target.value);
+
+    if (!selected) {
+      setForm((prev) => ({
+        ...prev,
+        assigneeId: "",
+        assigneeName: "",
+      }));
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      assigneeId: selected.userId,
+      assigneeName: selected.name || selected.email,
+    }));
   };
 
   const handleSubmit = async () => {
@@ -63,12 +120,23 @@ export default function EditTaskForm({
         await taskService.updateStatus(task.taskId, form.status);
       }
       // 2. Then update the rest of the fields
-      await onSubmit(task.taskId, {
+      const updates: Partial<Task> = {
         title: form.title,
         description: form.description,
         priority: form.priority,
         deadline: form.deadline,
-      });
+      };
+
+      if (
+        isManager &&
+        (form.assigneeId !== task.assigneeId ||
+          form.assigneeName !== task.assigneeName)
+      ) {
+        updates.assigneeId = form.assigneeId;
+        updates.assigneeName = form.assigneeName;
+      }
+
+      await onSubmit(task.taskId, updates);
       onClose();
     } catch (err) {
       setError(getErrorMessage(err, "Failed to update task"));
@@ -140,6 +208,37 @@ export default function EditTaskForm({
         </div>
       </div>
 
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          Assignee
+        </label>
+        <select
+          value={form.assigneeId}
+          onChange={handleAssigneeChange}
+          disabled={!isManager || loadingUsers}
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+        >
+          <option value="">
+            {loadingUsers ? "Loading employees..." : "Unassigned"}
+          </option>
+          {isCurrentAssigneeMissing && (
+            <option value={form.assigneeId}>
+              {form.assigneeName || form.assigneeId}
+            </option>
+          )}
+          {assignableUsers.map((user) => (
+            <option key={user.userId} value={user.userId}>
+              {user.name || user.email}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-400 mt-1">
+          {isManager
+            ? `Assignable employees are limited to the ${task.teamId} team.`
+            : "Only managers can change assignees."}
+        </p>
+      </div>
+
       {/* Status — employees can only move to adjacent statuses */}
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -165,10 +264,6 @@ export default function EditTaskForm({
 
       {/* Read-only info */}
       <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-        <p className="text-xs text-gray-500">
-          <span className="font-medium">Assignee:</span>{" "}
-          {task.assigneeName ?? task.assigneeId}
-        </p>
         <p className="text-xs text-gray-500">
           <span className="font-medium">Team:</span> {task.teamId}
         </p>
