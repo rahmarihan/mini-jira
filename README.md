@@ -14,7 +14,7 @@ Click the link above to open the live deployed web application. No additional co
 
 ## 🎥 Demo Video
 
-> 📹 *[Insert demo video link here — YouTube / Google Drive / Loom]*
+> 📹 *https://drive.google.com/file/d/1kr9j2d1IauiX7zwJU4z3fizAmCDhOWRS/view?usp=drive_link*
 
 ---
 
