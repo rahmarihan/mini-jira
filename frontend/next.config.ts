@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'export',
   allowedDevOrigins: ['172.22.128.1'],
   turbopack: {
     root: __dirname,
