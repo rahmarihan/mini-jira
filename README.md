@@ -6,7 +6,7 @@
 
 ## 🌐 Live Application
 
-> **[https://d9cq3auro8woj.cloudfront.net](https://d9cq3auro8woj.cloudfront.net)**
+> **[https://d3sty91ryq307z.cloudfront.net](https://d3sty91ryq307z.cloudfront.net)**
 
 Click the link above to open the live deployed web application. No additional configuration required.
 
